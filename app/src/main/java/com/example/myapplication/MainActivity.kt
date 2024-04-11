@@ -40,14 +40,19 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background) {
                     val gameState by viewModel.gameState.collectAsState()
                     val scrollState = rememberScrollState()
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.verticalScroll(scrollState)) {
+                        modifier = Modifier.verticalScroll(scrollState)
+                    ) {
                         Board(gameState)
+
                         Button(
                             onClick = {
-                                viewModel.movePiece()
-                            }) {
+                                viewModel.gameMover()
+                            }
+                        ) {
                             Text(text = "Move")
                         }
                     }
