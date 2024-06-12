@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -23,7 +24,8 @@ class GameViewModel: ViewModel() {
         }
     }
 
-    private fun movePieceWhite(){
+    @VisibleForTesting
+    fun movePieceWhite(){
         val state = _gameState.value
         val movePosition = state.positionWhite.toMutableList()
         if (state.positionWhite[0] < 7) {
@@ -36,7 +38,8 @@ class GameViewModel: ViewModel() {
         _gameState.value = state.copy(positionWhite = movePosition)
     }
 
-    private fun movePieceBlack(){
+    @VisibleForTesting
+    fun movePieceBlack(){
         val state = _gameState.value
         val movePosition = state.positionBlack.toMutableList()
         if (state.positionBlack[0] > 0) {
