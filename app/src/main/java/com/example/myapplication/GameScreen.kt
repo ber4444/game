@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -41,7 +43,7 @@ fun GameScreen(
                 viewModel.gameMover()
             }
         ) {
-            Text(text = "Move")
+            Text(text = stringResource(R.string.move_button))
         }
     }
 }
@@ -51,13 +53,14 @@ fun GameScreen(
 fun Square(isDarkSquare: Boolean, windowSize: WindowWidthSizeClass, content: @Composable ()-> Unit) {
     Box(modifier = Modifier
         .size(
-            when (windowSize){
+            when (windowSize) {
                 WindowWidthSizeClass.Expanded -> 60.dp
                 WindowWidthSizeClass.Medium -> 50.dp
                 else -> 40.dp
             }
         )
-        .background(color = if (isDarkSquare) Color(0xFFBCC0C0) else Color.White),
+        .background(color = if (isDarkSquare) MaterialTheme.colorScheme.secondary
+            else Color.White),
         contentAlignment = Alignment.Center
     ) {
         content()
