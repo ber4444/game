@@ -29,18 +29,20 @@ class GameViewModel: ViewModel() {
     @VisibleForTesting
     fun movePieceWhite(){
         val state = _gameState.value
-        val newPosition = randomMove(state.positionWhite, listOf(state.positionBlack))
+        val threatenedZones = calculateThreatenedZones(state.positionBlack)
+        val newPosition = randomMove(state.positionWhite, listOf(state.positionBlack), threatenedZones)
         _gameState.value = state.copy(positionWhite = newPosition)
     }
 
     @VisibleForTesting
     fun movePieceBlack(){
         val state = _gameState.value
-        val newPosition = randomMove(state.positionBlack, listOf(state.positionWhite))
+        val threatenedZones = calculateThreatenedZones(state.positionWhite)
+        val newPosition = randomMove(state.positionBlack, listOf(state.positionWhite), threatenedZones)
         _gameState.value = state.copy(positionBlack = newPosition)
     }
 
-    private fun randomMove(currentPosition: List<Int>, otherPiecePositions: List<List<Int>>): List<Int> {
+    private fun randomMove(currentPosition: List<Int>, otherPiecePositions: List<List<Int>>, threatenedZones: List<List<Int>>): List<Int> {
         val possibleMoves = mutableListOf<List<Int>>()
 
         val moves = listOf(
@@ -48,9 +50,10 @@ class GameViewModel: ViewModel() {
             listOf(0, -1), listOf(0, 1),
             listOf(1, -1), listOf(1, 0), listOf(1, 1)
         )
+
         for (move in moves) {
             val newPosition = listOf(currentPosition[0] + move[0], currentPosition[1] + move[1])
-            if (newPosition[0] in 0..7 && newPosition[1] in 0..7 && newPosition !in otherPiecePositions) {
+            if (newPosition[0] in 0..7 && newPosition[1] in 0..7 && newPosition !in otherPiecePositions && newPosition !in threatenedZones) {
                 possibleMoves.add(newPosition)
             }
         }
@@ -60,5 +63,25 @@ class GameViewModel: ViewModel() {
         }
 
         return possibleMoves[Random.nextInt(possibleMoves.size)]
+    }
+
+    @VisibleForTesting
+    fun calculateThreatenedZones(kingPosition: List<Int>): List<List<Int>> {
+        val threatenedZones = mutableListOf<List<Int>>()
+
+        val moves = listOf(
+            listOf(-1, -1), listOf(-1, 0), listOf(-1, 1),
+            listOf(0, -1), listOf(0, 1),
+            listOf(1, -1), listOf(1, 0), listOf(1, 1)
+        )
+
+        for (move in moves) {
+            val threatenedPosition = listOf(kingPosition[0] + move[0], kingPosition[1] + move[1])
+            if (threatenedPosition[0] in 0..7 && threatenedPosition[1] in 0..7) {
+                threatenedZones.add(threatenedPosition)
+            }
+        }
+
+        return threatenedZones
     }
 }
