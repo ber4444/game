@@ -1,11 +1,14 @@
 package com.example.myapplication
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -38,12 +41,20 @@ fun GameScreen(
         modifier = Modifier.verticalScroll(scrollState)
     ) {
         Board(gameState, windowSize)
+        
         Button(
             onClick = {
                 viewModel.gameMover()
-            }
+            },
+            enabled = !gameState.gameEnded  // button is enabled only when game has not ended
         ) {
             Text(text = stringResource(R.string.move_button))
+        }
+        
+        if(gameState.gameEnded == true){
+            Text(
+                text = stringResource(R.string.game_end_message, gameState.winner ?: "No one")
+            )
         }
     }
 }
@@ -88,12 +99,17 @@ fun Board(state: GameUiState, windowSize: WindowWidthSizeClass) {
                 ) {
                     repeat(8) { column ->
                         Square((row + column) % 2 == 1, windowSize) {
-                            when {
-                                (row == state.positionBlack.first() && column == state.positionBlack.last()) ->
-                                    Piece(pieceModel = King(Set.BLACK), windowSize)
-                                (row == state.positionWhite.first() && column == state.positionWhite.last()) ->
-                                    Piece(pieceModel = King(Set.WHITE), windowSize)
-                            }
+                            val pieceWhite = state.piecesWhite
+                                .zip(state.positionsWhite)
+                                .firstOrNull { it.second == listOf(row, column) }
+                                ?.first
+                            
+                            val pieceBlack = state.piecesBlack
+                                .zip(state.positionsBlack)
+                                .firstOrNull{ it.second == listOf(row, column) }
+                                ?.first
+                            
+                            pieceWhite?.let { Piece(pieceModel = it, windowSize) } ?: pieceBlack?.let { Piece(pieceModel = it, windowSize) }
                         }
                     }
                 }
