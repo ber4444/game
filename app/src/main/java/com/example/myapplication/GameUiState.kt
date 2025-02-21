@@ -14,4 +14,7 @@ data class GameUiState(
     
     val gameEnded: Boolean = false,
     val winner: String? = null,
+
+    // TODO add "slow" and "fast" game modes - "slow" mode moves pieces one at a time,
+    //  "fast" moves pieces by the maximum possible distance
 )

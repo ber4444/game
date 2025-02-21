@@ -99,6 +99,10 @@ fun Board(state: GameUiState, windowSize: WindowWidthSizeClass) {
                 ) {
                     repeat(8) { column ->
                         Square((row + column) % 2 == 1, windowSize) {
+                        // display a piece on the board if it exists at the given row and column
+                            // pair each white piece with its position
+                            // find the first pair where the position matches the current row and column
+                            // extract the piece from the pair if it exists
                             val pieceWhite = state.piecesWhite
                                 .zip(state.positionsWhite)
                                 .firstOrNull { it.second == listOf(row, column) }
@@ -109,7 +113,8 @@ fun Board(state: GameUiState, windowSize: WindowWidthSizeClass) {
                                 .firstOrNull{ it.second == listOf(row, column) }
                                 ?.first
                             
-                            pieceWhite?.let { Piece(pieceModel = it, windowSize) } ?: pieceBlack?.let { Piece(pieceModel = it, windowSize) }
+                            pieceWhite?.let { Piece(pieceModel = it, windowSize) } ?:
+                            pieceBlack?.let { Piece(pieceModel = it, windowSize) }
                         }
                     }
                 }

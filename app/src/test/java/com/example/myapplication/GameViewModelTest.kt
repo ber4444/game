@@ -8,9 +8,9 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceWhite within bounds and no overlap`() {
-        viewModel.movePieceWhite()
-        val positionWhite = viewModel.gameState.value.positionWhite
-        val positionBlack = viewModel.gameState.value.positionBlack
+        viewModel.moveAllPiecesWhite()
+        val positionWhite = viewModel.gameState.value.positionsWhite.first()
+        val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
         assertTrue("White piece out of bounds", positionWhite[0] in 0..7 && positionWhite[1] in 0..7)
         assertTrue("Pieces overlap", positionWhite != positionBlack)
@@ -18,22 +18,22 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceBlack within bounds and no overlap`() {
-        viewModel.movePieceBlack()
-        val positionBlack = viewModel.gameState.value.positionBlack
-        val positionWhite = viewModel.gameState.value.positionWhite
+        viewModel.moveAllPiecesBlack()
+        val positionBlack = viewModel.gameState.value.positionsBlack.first()
+        val positionWhite = viewModel.gameState.value.positionsWhite.first()
 
         assertTrue("Black piece out of bounds", positionBlack[0] in 0..7 && positionBlack[1] in 0..7)
         assertTrue("Pieces overlap", positionBlack != positionWhite)
     }
 
     @Test
-    fun `test multiple moves to ensure no overlap`() {
-        repeat(10) {
-            viewModel.movePieceWhite()
-            viewModel.movePieceBlack()
+    fun `play until game over and ensure no overlap`() {
+        while(! viewModel.gameState.value.gameEnded) {
+            viewModel.moveAllPiecesWhite()
+            viewModel.moveAllPiecesBlack()
 
-            val positionWhite = viewModel.gameState.value.positionWhite
-            val positionBlack = viewModel.gameState.value.positionBlack
+            val positionWhite = viewModel.gameState.value.positionsWhite.first()
+            val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
             assertTrue("White piece out of bounds", positionWhite[0] in 0..7 && positionWhite[1] in 0..7)
             assertTrue("Black piece out of bounds", positionBlack[0] in 0..7 && positionBlack[1] in 0..7)

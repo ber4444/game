@@ -29,4 +29,11 @@ class GameScreenTest {
         composeTestRule.onNodeWithText(King(Set.WHITE).symbol).assertIsDisplayed()
     }
 
+    @Test
+    fun testGameOver() {
+        // TODO
+        // move_button disabled
+        // game_end_message displayed
+    }
+
 }

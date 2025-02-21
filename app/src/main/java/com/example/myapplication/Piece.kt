@@ -17,6 +17,7 @@ class King(override val set: Set) : Piece {
         Set.WHITE -> "♔"
         Set.BLACK -> "♚"
     }
+    // TODO move logic should go here
 }
 @Immutable
 class Bishop(override val set: Set) : Piece {
