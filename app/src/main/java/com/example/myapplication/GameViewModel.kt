@@ -14,33 +14,39 @@ import kotlin.random.Random
 class GameViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameUiState())
     val gameState: StateFlow<GameUiState> = _gameState
-    
-    val moves = mutableMapOf<String, List<List<Int>>>()
-    
+
+    // Board Representation: (row, col) -> Piece
+    private val _board = MutableStateFlow<Map<Pair<Int, Int>, Piece?>>(
+        mutableMapOf()
+    )
+    val board: StateFlow<Map<Pair<Int, Int>, Piece?>> = _board
+
+
     init {
-        val kingMoves = mutableListOf<List<Int>>()
-        for(distance in -1 .. 1){
-            kingMoves.add(listOf(distance, distance))
-            kingMoves.add(listOf(distance, 0))
-            kingMoves.add(listOf(distance, distance * -1))
-            kingMoves.add(listOf(0, distance))
-        }
-        moves["King"] = kingMoves
-    
-        // could create a function that takes in a range and return a List<List<Int>> of moves, but kings and queens are only pieces with similar moveset
-        // would have to create a List<List<Int>> of moves for every piece, as pieces have unique moves
-        val queenMoves = mutableListOf<List<Int>>()
-        for(distance in -7 .. 7){
-            queenMoves.add(listOf(distance, distance))
-            queenMoves.add(listOf(distance, 0))
-            queenMoves.add(listOf(distance, distance * -1))
-            queenMoves.add(listOf(0, distance))
-        }
-        moves["Queen"] = queenMoves
+        setupBoard()
     }
-    
+
+    private fun setupBoard() {
+        val boardSetup = mutableMapOf<Pair<Int, Int>, Piece?>()
+
+        // Place Kings
+        boardSetup[Pair(0, 4)] = King(Set.WHITE)
+        boardSetup[Pair(7, 4)] = King(Set.BLACK)
+
+        // Place Queens
+        boardSetup[Pair(0, 3)] = Queen(Set.WHITE)
+        boardSetup[Pair(7, 3)] = Queen(Set.BLACK)
+
+
+        _board.value = boardSetup
+    }
+
+    fun getValidMoves(piece: Piece, position: Pair<Int, Int>): List<List<Int>> {
+        return piece.getValidMovesPositions(position.first, position.second, GameMode.FAST, _board.value)
+    }
+
     private var gameMoves: Job? = null
-    
+
     fun gameMover() {
         gameMoves?.cancel()
         gameMoves = viewModelScope.launch {
@@ -50,18 +56,18 @@ class GameViewModel : ViewModel() {
             moveAllPiecesBlack()
         }
     }
-    
+
     @VisibleForTesting
     fun moveAllPiecesWhite() {
         var state = _gameState.value
         val newPositions = state.positionsWhite.toMutableList()
         if(state.piecesWhite.isEmpty()) return      // trying to perform moves when there are no pieces crashes app, so return early
-        
+
         // for all white pieces, place them at a new position
         for(i in 0 until state.piecesWhite.size){
             val newPosition = randomMove(state.piecesWhite[i], state.positionsWhite[i], state.positionsBlack, state.positionsWhite)
             newPositions[i] = newPosition
-            
+
             // if piece is on top of the other color's piece (capturing), remove the other color's piece and its corresponding position
             if(newPosition in state.positionsBlack){
                 val pos = state.positionsBlack.indexOf(newPosition)
@@ -69,7 +75,7 @@ class GameViewModel : ViewModel() {
                 piecesWithRemovedPiece.removeAt(pos)
                 val positionsWithRemovedPiece = state.positionsBlack.toMutableList()
                 positionsWithRemovedPiece.removeAt(pos)
-                
+
                 // enemy's king is always at position 0. if captured, end the game
                 if(pos == 0){
                     state = state.copy(
@@ -92,18 +98,18 @@ class GameViewModel : ViewModel() {
         }
         _gameState.value = state
     }
-    
+
     @VisibleForTesting
     fun moveAllPiecesBlack() {
         var state = _gameState.value
         val newPositions = state.positionsBlack.toMutableList()
         if(state.piecesBlack.isEmpty()) return      // trying to perform moves when there are no pieces crashes app, so return early
-        
+
         // for all black pieces, place them at a new position
         for(i in 0 until state.piecesBlack.size){
             val newPosition = randomMove(state.piecesBlack[i], state.positionsBlack[i], state.positionsWhite, state.positionsBlack)
             newPositions[i] = newPosition
-            
+
             // if piece is on top of the other color's piece (capturing), remove the other color's piece and its corresponding position
             if(newPosition in state.positionsWhite) {
                 val pos = state.positionsWhite.indexOf(newPosition)
@@ -111,7 +117,7 @@ class GameViewModel : ViewModel() {
                 piecesWithRemovedPiece.removeAt(pos)
                 val positionsWithRemovedPiece = state.positionsWhite.toMutableList()
                 positionsWithRemovedPiece.removeAt(pos)
-                
+
                 // enemy's king is always at position 0. if captured, end the game
                 if(pos == 0){
                     state = state.copy(
@@ -134,41 +140,39 @@ class GameViewModel : ViewModel() {
         }
         _gameState.value = state
     }
-    
-    private fun randomMove(piece: Piece, currentPosition: List<Int>, enemyPositions: List<List<Int>>, allyPositions: List<List<Int>>): List<Int> {
-        val possibleMoves = mutableListOf<List<Int>>()
-        
-        // retrieve the list of moves depending on class type of piece
-        val pieceMoves = when(piece) {
-            is King -> moves["King"]
-            is Queen -> moves["Queen"]
-            else -> null
-        }
-        
+
+    private fun randomMove(
+        piece: Piece,
+        currentPosition: List<Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
+    ): List<Int> {
+        val possibleMoves = piece.getValidMovesPositions(
+            currentPosition[0], currentPosition[1], getGameMode(piece), _board.value
+        )
+
         val teamPositions = allyPositions - currentPosition
-    
-        if (pieceMoves != null) {
-            for(move in pieceMoves) {
-                val newPosition = listOf(currentPosition[0] + move[0], currentPosition[1] + move[1])
-                
-                // new position has to be in the board, and cannot be on top of a team's piece. it CAN however be on top of an enemy piece (capturing)
-                if(newPosition[0] in 0 .. 7 && newPosition[1] in 0 .. 7 && newPosition !in teamPositions){
-                    possibleMoves.add(newPosition)
-                }
-            }
+
+        val validMoves = possibleMoves.filter { move ->
+            val newPosition = listOf(move[0], move[1])
+            newPosition[0] in 0..7 && newPosition[1] in 0..7 && newPosition !in teamPositions
         }
-        
-        // no possible moves
-        if(possibleMoves.isEmpty()) {
-            return currentPosition
-        }
-        
-        // pieces have preference to capture enemy king (to win the game immediately)
+
+        if (validMoves.isEmpty()) return currentPosition
+
+        // Prioritize capturing enemy King
         val enemyKingPos = enemyPositions[0]
-        if(enemyKingPos in possibleMoves){
-            return enemyKingPos
+        return validMoves.find { it == enemyKingPos } ?: validMoves.random()
+    }
+
+
+    @Suppress("SameReturnValue")
+    private fun getGameMode(piece: Piece): GameMode {
+        return when (piece) {
+            is King -> GameMode.SLOW
+            is Queen -> GameMode.SLOW // TODO make it a UI control
+            else -> GameMode.SLOW // Default mode for other pieces
         }
-        
-        return possibleMoves[Random.nextInt(possibleMoves.size)]
     }
 }
+
