@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 class GameViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameUiState())
@@ -32,7 +33,7 @@ class GameViewModel : ViewModel() {
         val newPositions = state.positionsWhite.toMutableList()
         if(state.piecesWhite.isEmpty()) return      // trying to perform moves when there are no pieces crashes app, so return early
 
-        val i = 4//Random.nextInt(0, state.piecesWhite.size)
+        val i = Random.nextInt(0, state.piecesWhite.size)
         val newPosition = randomMove(state.piecesWhite[i], state.positionsWhite[i], state.positionsBlack, state.positionsWhite)
         newPositions[i] = newPosition
 
@@ -62,7 +63,7 @@ class GameViewModel : ViewModel() {
                 )
             }
         }
-        state = state.copy(positionsWhite = newPositions)
+        state = state.copy(positionsWhite = newPositions) // TODO select new random values until newPosition is actually different from current state
         _gameState.value = state
     }
 
@@ -72,7 +73,7 @@ class GameViewModel : ViewModel() {
         val newPositions = state.positionsBlack.toMutableList()
         if(state.piecesBlack.isEmpty()) return      // trying to perform moves when there are no pieces crashes app, so return early
 
-        val i = 4//Random.nextInt(0, state.piecesBlack.size)
+        val i = Random.nextInt(0, state.piecesBlack.size)
 
         val newPosition = randomMove(state.piecesBlack[i], state.positionsBlack[i], state.positionsWhite, state.positionsBlack)
         newPositions[i] = newPosition

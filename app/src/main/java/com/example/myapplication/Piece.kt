@@ -76,7 +76,7 @@ class Bishop(override val set: Set) : Piece {
 class Knight(override val set: Set) : Piece {
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.knight_light
-        Set.BLACK -> R.drawable.king_dark
+        Set.BLACK -> R.drawable.knight_dark
     }
 
     override fun getValidMovesPositions(
@@ -160,28 +160,19 @@ class Queen(override val set: Set) : Piece {
         )
 
         for ((dx, dy) in directions) {
-            var x = position.first
-            var y = position.second
-
-            x += dx
-            y += dy
-
-            if (x !in 0..7 || y !in 0..7) break // Stop if out of bounds
-
-            val pieceAtTarget = enemyPositions.find { it == listOf(x, y) }
-            if (pieceAtTarget == null) {
-                if (allyPositions.find { it == listOf(x, y) } == null)
-                    moves.add(listOf(x, y)) // Empty square, valid move
-            } else {
-                moves.add(listOf(x, y)) // Capture enemy piece
-                break // Stop moving in this direction
+            var x = position.first + dx
+            var y = position.second + dy
+            while (x in 0..7 && y in 0..7) {
+                val pos = listOf(x, y)
+                if (allyPositions.contains(pos)) break
+                moves.add(pos)
+                if (enemyPositions.contains(pos)) break
+                x += dx
+                y += dy
             }
         }
-
         return moves
     }
-
-
 }
 @Immutable
 class Rook(override val set: Set) : Piece {

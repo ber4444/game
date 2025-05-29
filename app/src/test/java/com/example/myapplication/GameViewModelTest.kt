@@ -27,7 +27,6 @@ class GameViewModelTest {
         assertTrue("Pieces overlap", positionBlack != positionWhite)
     }
 
-    @Ignore // TODO needs game logic implemented for more pieces than just the king
     @Test
     fun `play until game over and ensure no overlap`() {
         while(! viewModel.gameState.value.gameEnded) {
