@@ -1,19 +1,19 @@
 package com.example.myapplication
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -23,9 +23,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun GameScreen(
@@ -41,19 +41,24 @@ fun GameScreen(
         modifier = Modifier.verticalScroll(scrollState)
     ) {
         Board(gameState, windowSize)
-        
+
+        Spacer(modifier = Modifier.padding(16.dp))
+
         Button(
             onClick = {
                 viewModel.gameMover()
             },
             enabled = !gameState.gameEnded  // button is enabled only when game has not ended
         ) {
-            Text(text = stringResource(R.string.move_button))
+            Text(text = stringResource(R.string.move_button), style = MaterialTheme.typography.titleLarge)
         }
         
         if(gameState.gameEnded == true){
+            Spacer(modifier = Modifier.padding(16.dp))
             Text(
-                text = stringResource(R.string.game_end_message, gameState.winner ?: "No one")
+                text = stringResource(R.string.game_end_message, gameState.winner ?: "Draw"),
+                color = Color.Red,
+                style = MaterialTheme.typography.titleLarge
             )
         }
     }
@@ -61,15 +66,10 @@ fun GameScreen(
 
 
 @Composable
-fun Square(isDarkSquare: Boolean, windowSize: WindowWidthSizeClass, content: @Composable ()-> Unit) {
+fun RowScope.Square(isDarkSquare: Boolean, content: @Composable ()-> Unit) {
     Box(modifier = Modifier
-        .size(
-            when (windowSize) {
-                WindowWidthSizeClass.Expanded -> 60.dp
-                WindowWidthSizeClass.Medium -> 50.dp
-                else -> 40.dp
-            }
-        )
+        .weight(1f)
+        .aspectRatio(1f)
         .background(color = if (isDarkSquare) MaterialTheme.colorScheme.secondary
             else Color.White),
         contentAlignment = Alignment.Center
@@ -98,7 +98,7 @@ fun Board(state: GameUiState, windowSize: WindowWidthSizeClass) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     repeat(8) { column ->
-                        Square((row + column) % 2 == 1, windowSize) {
+                        Square((row + column) % 2 == 1) {
                         // display a piece on the board if it exists at the given row and column
                             // pair each white piece with its position
                             // find the first pair where the position matches the current row and column
@@ -113,8 +113,8 @@ fun Board(state: GameUiState, windowSize: WindowWidthSizeClass) {
                                 .firstOrNull{ it.second == listOf(row, column) }
                                 ?.first
                             
-                            pieceWhite?.let { Piece(pieceModel = it, windowSize) } ?:
-                            pieceBlack?.let { Piece(pieceModel = it, windowSize) }
+                            pieceWhite?.let { Piece(pieceModel = it) } ?:
+                            pieceBlack?.let { Piece(pieceModel = it) }
                         }
                     }
                 }
@@ -124,14 +124,10 @@ fun Board(state: GameUiState, windowSize: WindowWidthSizeClass) {
 }
 
 @Composable
-fun Piece(pieceModel: Piece, windowSize: WindowWidthSizeClass) {
-    Text(
-        text = pieceModel.symbol,
-        fontSize = (
-                when (windowSize) {
-                    WindowWidthSizeClass.Expanded -> 48.sp
-                    WindowWidthSizeClass.Medium -> 38.sp
-                    else -> 28.sp
-                })
+fun Piece(pieceModel: Piece) { // TODO animate the piece movement
+    Icon(
+        painter = painterResource(id = pieceModel.asset),
+        tint = Color.Unspecified,
+        contentDescription = pieceModel.asset.toString()
     )
 }

@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 700)
+@Preview(showBackground = true, widthDp = 700, heightDp = 1000)
 fun GameMediumPreview() {
     MyApplicationTheme {
         GameScreen(windowSize = WindowWidthSizeClass.Medium, GameViewModel())
@@ -42,7 +42,7 @@ fun GameMediumPreview() {
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 1000)
+@Preview(showBackground = true, widthDp = 1000, heightDp = 1300)
 fun GameLargePreview() {
     MyApplicationTheme {
         GameScreen(windowSize = WindowWidthSizeClass.Expanded, viewModel = GameViewModel())

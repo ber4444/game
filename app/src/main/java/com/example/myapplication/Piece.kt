@@ -4,8 +4,10 @@ import androidx.compose.runtime.Immutable
 
 interface Piece {
     val set: Set
-    val symbol: String
-    fun getValidMovesPositions( position1: Int, position2: Int, mode: GameMode, board: Map<Pair<Int, Int>, Piece?>): List<List<Int>>
+    val asset: Int
+    fun getValidMovesPositions(position: Pair<Int, Int>,
+                               enemyPositions: List<List<Int>>,
+                               allyPositions: List<List<Int>>): List<List<Int>>
 
 }
 
@@ -15,100 +17,79 @@ enum class Set {
 
 @Immutable
 class King(override val set: Set) : Piece {
-    override val symbol: String = when (set) {
-        Set.WHITE -> "♔"
-        Set.BLACK -> "♚"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.king_light
+        Set.BLACK -> R.drawable.king_dark
     }
-    //Returning all Valid position
-    // It will take the current positions of the kind in 0th index
-    // and the destination position of the KIng at 1st index
-    // The size will be 2 always
-    // Mode is slow or Fast
     override fun getValidMovesPositions(
-        position1: Int, position2: Int, mode: GameMode, board: Map<Pair<Int, Int>, Piece?>
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
     ): List<List<Int>> {
-        val moves = mutableListOf<List<Int>>()
-
-        for (dx in -1..1) {
-            for (dy in -1..1) {
-                if (dx != 0 || dy != 0) {
-                    val newX = position1 + dx
-                    val newY = position2 + dy
-                    if (newX in 0..7 && newY in 0..7) { // Ensure within bounds
-                        val pieceAtTarget = board[Pair(newX, newY)]
-                        if (pieceAtTarget == null || pieceAtTarget.set != this.set) {
-                            moves.add(listOf(newX, newY)) // Add if empty or enemy piece
-                        }
-                    }
-                }
-            }
-        }
-        return moves
+        return emptyList()
+        // TODO any neighboring square that is not occupied by an ally piece
+        // and not under attack by an enemy piece
     }
 
 }
 @Immutable
 class Bishop(override val set: Set) : Piece {
-    override val symbol: String = when (set) {
-        Set.WHITE -> "♗"
-        Set.BLACK -> "♝"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.bishop_light
+        Set.BLACK -> R.drawable.bishop_dark
     }
 
     override fun getValidMovesPositions(
-        position1: Int,
-        position2: Int,
-        mode: GameMode,
-        board: Map<Pair<Int, Int>, Piece?>
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
     ): List<List<Int>> {
-        TODO("Not yet implemented")
+        return emptyList()
     }
 
 }
 @Immutable
 class Knight(override val set: Set) : Piece {
-    override val symbol: String = when (set) {
-        Set.WHITE -> "♘"
-        Set.BLACK -> "♞"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.knight_light
+        Set.BLACK -> R.drawable.king_dark
     }
 
     override fun getValidMovesPositions(
-        position1: Int,
-        position2: Int,
-        mode: GameMode,
-        board: Map<Pair<Int, Int>, Piece?>
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
     ): List<List<Int>> {
-        TODO("Not yet implemented")
+        return emptyList()
     }
 }
 @Immutable
 class Pawn(override val set: Set) : Piece {
-    override val symbol: String = when (set) {
-        Set.WHITE -> "♙"
-        Set.BLACK -> "♟︎"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.pawn_light
+        Set.BLACK -> R.drawable.pawn_dark
     }
 
     override fun getValidMovesPositions(
-        position1: Int,
-        position2: Int,
-        mode: GameMode,
-        board: Map<Pair<Int, Int>, Piece?>
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
     ): List<List<Int>> {
-        TODO("Not yet implemented")
+        return emptyList()
     }
 
 }
 @Immutable
 class Queen(override val set: Set) : Piece {
-    override val symbol: String = when (set) {
-        Set.WHITE -> "♕"
-        Set.BLACK -> "♛"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.queen_light
+        Set.BLACK -> R.drawable.queen_dark
     }
 
     override fun getValidMovesPositions(
-        position1: Int,
-        position2: Int,
-        mode: GameMode,
-        board: Map<Pair<Int, Int>, Piece?>
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
     ): List<List<Int>> {
         val moves = mutableListOf<List<Int>>()
         val directions = listOf(
@@ -119,26 +100,21 @@ class Queen(override val set: Set) : Piece {
         )
 
         for ((dx, dy) in directions) {
-            var x = position1
-            var y = position2
+            var x = position.first
+            var y = position.second
 
-            while (true) {
-                x += dx
-                y += dy
+            x += dx
+            y += dy
 
-                if (x !in 0..7 || y !in 0..7) break // Stop if out of bounds
+            if (x !in 0..7 || y !in 0..7) break // Stop if out of bounds
 
-                val pieceAtTarget = board[Pair(x, y)]
-                if (pieceAtTarget == null) {
+            val pieceAtTarget = enemyPositions.find { it == listOf(x, y) }
+            if (pieceAtTarget == null) {
+                if (allyPositions.find { it == listOf(x, y) } == null)
                     moves.add(listOf(x, y)) // Empty square, valid move
-                } else {
-                    if (pieceAtTarget.set != this.set) {
-                        moves.add(listOf(x, y)) // Capture enemy piece
-                    }
-                    break // Stop moving in this direction
-                }
-
-                if (mode == GameMode.SLOW) break // If slow mode, stop after one move
+            } else {
+                moves.add(listOf(x, y)) // Capture enemy piece
+                break // Stop moving in this direction
             }
         }
 
@@ -149,18 +125,16 @@ class Queen(override val set: Set) : Piece {
 }
 @Immutable
 class Rook(override val set: Set) : Piece {
-    override val symbol: String = when (set) {
-        Set.WHITE -> "♖"
-        Set.BLACK -> "♜"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.rook_light
+        Set.BLACK -> R.drawable.rook_dark
     }
 
     override fun getValidMovesPositions(
-        position1: Int,
-        position2: Int,
-        mode: GameMode,
-        board: Map<Pair<Int, Int>, Piece?>
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        allyPositions: List<List<Int>>
     ): List<List<Int>> {
-        TODO("Not yet implemented")
+        return emptyList()
     }
-
 }

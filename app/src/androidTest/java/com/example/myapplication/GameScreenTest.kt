@@ -3,6 +3,7 @@ package com.example.myapplication
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -26,14 +27,13 @@ class GameScreenTest {
 
         composeTestRule.onNodeWithText("Move").performClick()
 
-        composeTestRule.onNodeWithText(King(Set.WHITE).symbol).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(King(Set.WHITE).asset.toString()).assertIsDisplayed()
     }
 
     @Test
     fun testGameOver() {
-        // TODO
-        // move_button disabled
-        // game_end_message displayed
+        // TODO - initialize the screen with the final view state
+        // verify that game_end_message displayed
     }
 
 }
