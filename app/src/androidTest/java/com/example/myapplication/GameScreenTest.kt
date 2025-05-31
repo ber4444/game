@@ -34,6 +34,21 @@ class GameScreenTest {
     fun testGameOver() {
         // TODO - initialize the screen with the final view state
         // verify that game_end_message displayed
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                GameScreen(
+                    WindowWidthSizeClass.Medium,
+                    GameViewModel(
+                        GameUiState(
+                            gameEnded = true,
+                            winner = "White"
+                        )
+                    )
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Game ended", substring = true).assertIsDisplayed()
     }
 
 }

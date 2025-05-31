@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-class GameViewModel : ViewModel() {
-    private val _gameState = MutableStateFlow(GameUiState())
+class GameViewModel(
+    gameState: GameUiState = GameUiState()
+) : ViewModel() {
+    private val _gameState = MutableStateFlow(gameState)
     val gameState: StateFlow<GameUiState> = _gameState
 
     private var gameMoves: Job? = null
