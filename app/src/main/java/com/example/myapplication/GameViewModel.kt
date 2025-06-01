@@ -75,7 +75,7 @@ class GameViewModel(
         }
         newPositions[positionIndexPair.second] = newPosition
 
-        moveToNewPosition(
+        _gameState.value = deriveNewGameState(
             newPosition = newPosition,
             turn = turn,
             allyPositions = newPositions,
@@ -148,13 +148,13 @@ class GameViewModel(
         }
     }
 
-    private fun moveToNewPosition(
+    private fun deriveNewGameState(
         newPosition: List<Int>,
         turn: Set,
         allyPositions: List<List<Int>>,
         enemyPositions: List<List<Int>>,
         enemyPieces: List<Piece>
-    ) {
+    ): GameUiState {
         var newState: GameUiState
         val updatedEnemyPieces = enemyPieces.toMutableList()
         val updatedEnemyPositions = enemyPositions.toMutableList()
@@ -172,8 +172,7 @@ class GameViewModel(
                     gameEnded = true,
                     winner = winner
                 )
-                _gameState.value = newState
-                return
+                return newState
             }
         }
 
@@ -194,7 +193,7 @@ class GameViewModel(
             }
         }
 
-        _gameState.value = newState
+        return newState
     }
 }
 
