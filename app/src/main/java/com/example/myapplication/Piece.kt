@@ -4,11 +4,55 @@ import androidx.compose.runtime.Immutable
 
 interface Piece {
     val set: Set
+    val name: String
     val asset: Int
     fun getValidMovesPositions(position: Pair<Int, Int>,
                                enemyPositions: List<List<Int>>,
                                allyPositions: List<List<Int>>): List<List<Int>>
 
+}
+
+private fun Piece.validateUnboundMove(
+    direction: Pair<Int, Int>,
+    position: Pair<Int, Int>,
+    allyPositions: List<List<Int>>,
+    enemyPositions: List<List<Int>>
+): List<List<Int>> {
+    val moves = mutableListOf<List<Int>>()
+    var x = position.first + direction.first
+    var y = position.second + direction.second
+    while (x in 0..7 && y in 0..7) {
+        val pos = listOf(x, y)
+        if (allyPositions.contains(pos)) { // if we are bumping into an ally. stop. do not add.
+            return moves
+        }
+        if (!allyPositions.contains(pos)) { // if we aren't crowding our friend. add. good move!
+            moves.add(pos)
+        }
+        if (enemyPositions.contains(pos)) { // if this move removes an enemy. Return the list. We got one!
+            return moves
+        }
+        // move in the direction and see if the next square is also good
+        x += direction.first
+        y += direction.second
+    }
+
+    return moves
+}
+
+private fun Piece.validateBoundMove(
+    direction: Pair<Int, Int>,
+    position: Pair<Int, Int>,
+    allyPositions: List<List<Int>>
+): List<List<Int>> {
+    val moves = mutableListOf<List<Int>>()
+    var x = position.first + direction.first
+    var y = position.second + direction.second
+    if (x in 0..7 && y in 0..7 && !allyPositions.contains(listOf(x, y))) {
+        moves.add(listOf(x, y))
+    }
+
+    return moves
 }
 
 enum class Set {
@@ -17,6 +61,7 @@ enum class Set {
 
 @Immutable
 class King(override val set: Set) : Piece {
+    override val name = "King"
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.king_light
         Set.BLACK -> R.drawable.king_dark
@@ -31,19 +76,26 @@ class King(override val set: Set) : Piece {
             Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1),
             Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1)
         )
-        for ((dx, dy) in directions) {
-            val x = position.first + dx
-            val y = position.second + dy
-            if (x in 0..7 && y in 0..7 && !allyPositions.contains(listOf(x, y))) {
-                moves.add(listOf(x, y))
-            }
+        for (direction in directions) {
+            moves += validateBoundMove(
+                direction = direction,
+                position = position,
+                allyPositions = allyPositions
+            )
         }
         return moves
-        // TODO should not be under attack by an enemy piece
+    }
+
+    private fun wouldIBeUnderAttack() {
+        // take a move
+        // verify if any opposing pieces can attack the king
+        // remove move?
+
     }
 }
 @Immutable
 class Bishop(override val set: Set) : Piece {
+    override val name = "Bishop"
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.bishop_light
         Set.BLACK -> R.drawable.bishop_dark
@@ -57,16 +109,12 @@ class Bishop(override val set: Set) : Piece {
         val moves = mutableListOf<List<Int>>()
         val directions = listOf(Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1))
         for ((dx, dy) in directions) {
-            var x = position.first + dx
-            var y = position.second + dy
-            while (x in 0..7 && y in 0..7) {
-                val pos = listOf(x, y)
-                if (allyPositions.contains(pos)) break
-                moves.add(pos)
-                if (enemyPositions.contains(pos)) break
-                x += dx
-                y += dy
-            }
+            moves += validateUnboundMove(
+                direction = Pair(dx, dy),
+                position = position,
+                allyPositions = allyPositions,
+                enemyPositions = enemyPositions
+            )
         }
         return moves
     }
@@ -74,6 +122,7 @@ class Bishop(override val set: Set) : Piece {
 }
 @Immutable
 class Knight(override val set: Set) : Piece {
+    override val name = "Knight"
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.knight_light
         Set.BLACK -> R.drawable.knight_dark
@@ -89,19 +138,19 @@ class Knight(override val set: Set) : Piece {
             Pair(2, 1), Pair(1, 2), Pair(-1, 2), Pair(-2, 1),
             Pair(-2, -1), Pair(-1, -2), Pair(1, -2), Pair(2, -1)
         )
-        for ((dx, dy) in deltas) {
-            val x = position.first + dx
-            val y = position.second + dy
-            val pos = listOf(x, y)
-            if (x in 0..7 && y in 0..7 && !allyPositions.contains(pos)) {
-                moves.add(pos)
-            }
+        for (delta in deltas) {
+            moves += validateBoundMove(
+                direction = delta,
+                position = position,
+                allyPositions = allyPositions
+            )
         }
         return moves
     }
 }
 @Immutable
 class Pawn(override val set: Set) : Piece {
+    override val name = "Pawn"
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.pawn_light
         Set.BLACK -> R.drawable.pawn_dark
@@ -141,6 +190,7 @@ class Pawn(override val set: Set) : Piece {
 }
 @Immutable
 class Queen(override val set: Set) : Piece {
+    override val name = "Queen"
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.queen_light
         Set.BLACK -> R.drawable.queen_dark
@@ -160,22 +210,19 @@ class Queen(override val set: Set) : Piece {
         )
 
         for ((dx, dy) in directions) {
-            var x = position.first + dx
-            var y = position.second + dy
-            while (x in 0..7 && y in 0..7) {
-                val pos = listOf(x, y)
-                if (allyPositions.contains(pos)) break
-                moves.add(pos)
-                if (enemyPositions.contains(pos)) break
-                x += dx
-                y += dy
-            }
+            moves += validateUnboundMove(
+                direction = Pair(dx, dy),
+                position = position,
+                allyPositions = allyPositions,
+                enemyPositions = enemyPositions
+            )
         }
         return moves
     }
 }
 @Immutable
 class Rook(override val set: Set) : Piece {
+    override val name = "Rook"
     override val asset: Int = when (set) {
         Set.WHITE -> R.drawable.rook_light
         Set.BLACK -> R.drawable.rook_dark
@@ -193,9 +240,12 @@ class Rook(override val set: Set) : Piece {
             var y = position.second + dy
             while (x in 0..7 && y in 0..7) {
                 val pos = listOf(x, y)
-                if (allyPositions.contains(pos)) break
-                moves.add(pos)
-                if (enemyPositions.contains(pos)) break
+                if (!allyPositions.contains(pos)) {
+                    moves.add(pos)
+                    if (enemyPositions.contains(pos)) break
+                } else {
+                    break
+                }
                 x += dx
                 y += dy
             }

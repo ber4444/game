@@ -8,7 +8,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 class GameViewModel(
     gameState: GameUiState = GameUiState()
@@ -22,104 +21,112 @@ class GameViewModel(
         gameMoves?.cancel()
         gameMoves = viewModelScope.launch {
             delay(500)
-            moveRandomWhite()
+            move(Set.WHITE)
             delay(500)
-            moveRandomBlack() // this is just for testing purposes, in a real game this would be user input
+            move(Set.BLACK) // this is just for testing purposes, in a real game this would be user input
             // also, it would account for whether you are in a check or checkmate or pinned situation
         }
     }
 
     @VisibleForTesting
-    fun moveRandomWhite() {
+    fun move(turn: Set) {
         var state = _gameState.value
-        val newPositions = state.positionsWhite.toMutableList()
-        if(state.piecesWhite.isEmpty()) return      // trying to perform moves when there are no pieces crashes app, so return early
-
-        val i = Random.nextInt(0, state.piecesWhite.size)
-        val newPosition = randomMove(state.piecesWhite[i], state.positionsWhite[i], state.positionsBlack, state.positionsWhite)
-        newPositions[i] = newPosition
-
-        // if piece is on top of the other color's piece (capturing), remove the other color's piece and its corresponding position
-        if(newPosition in state.positionsBlack){
-            val pos = state.positionsBlack.indexOf(newPosition)
-            val piecesWithRemovedPiece = state.piecesBlack.toMutableList()
-            piecesWithRemovedPiece.removeAt(pos)
-            val positionsWithRemovedPiece = state.positionsBlack.toMutableList()
-            positionsWithRemovedPiece.removeAt(pos)
-
-            // enemy's king is always at position 0. if captured, end the game
-            if(pos == 0){
-                state = state.copy(
-                    piecesBlack = piecesWithRemovedPiece,
-                    positionsBlack = positionsWithRemovedPiece,
-                    gameEnded = true, // TODO implement stalemate too
-                    winner = "White"
-                )
-                _gameState.value = state
-                return
+        val allyPositions: List<List<Int>>
+        val allyPieces: List<Piece>
+        val enemyPositions: List<List<Int>>
+        val enemyPieces: List<Piece>
+        when (turn) {
+            Set.WHITE -> {
+                allyPositions = state.positionsWhite
+                allyPieces = state.piecesWhite
+                enemyPositions = state.positionsBlack
+                enemyPieces = state.piecesBlack
             }
-            else{
-                state = state.copy(
-                    piecesBlack = piecesWithRemovedPiece,
-                    positionsBlack = positionsWithRemovedPiece
-                )
+            Set.BLACK -> {
+                allyPositions = state.positionsBlack
+                allyPieces = state.piecesBlack
+                enemyPositions = state.positionsWhite
+                enemyPieces = state.piecesWhite
             }
         }
-        state = state.copy(positionsWhite = newPositions) // TODO select new random values until newPosition is actually different from current state
-        _gameState.value = state
-    }
 
-    @VisibleForTesting
-    fun moveRandomBlack() {
-        var state = _gameState.value
-        val newPositions = state.positionsBlack.toMutableList()
-        if(state.piecesBlack.isEmpty()) return      // trying to perform moves when there are no pieces crashes app, so return early
-
-        val i = Random.nextInt(0, state.piecesBlack.size)
-
-        val newPosition = randomMove(state.piecesBlack[i], state.positionsBlack[i], state.positionsWhite, state.positionsBlack)
-        newPositions[i] = newPosition
-
-        // if piece is on top of the other color's piece (capturing), remove the other color's piece and its corresponding position
-        if(newPosition in state.positionsWhite) {
-            val pos = state.positionsWhite.indexOf(newPosition)
-            val piecesWithRemovedPiece = state.piecesWhite.toMutableList()
-            piecesWithRemovedPiece.removeAt(pos)
-            val positionsWithRemovedPiece = state.positionsWhite.toMutableList()
-            positionsWithRemovedPiece.removeAt(pos)
-
-            // enemy's king is always at position 0. if captured, end the game
-            if(pos == 0){
-                state = state.copy(
-                    piecesWhite = piecesWithRemovedPiece,
-                    positionsWhite = positionsWithRemovedPiece,
-                    gameEnded = true,
-                    winner = "Black"
-                )
-                _gameState.value = state
-                return
-            }
-            else{
-                state = state.copy(
-                    piecesWhite = piecesWithRemovedPiece,
-                    positionsWhite = positionsWithRemovedPiece
-                )
-            }
+        // trying to perform moves when there are no pieces crashes app, so return early
+        // white can win while black is trying to take another turn, so bail if we know there is a winner
+        if(allyPieces.isEmpty() || state.gameEnded) {
+            return
         }
-        state = state.copy(positionsBlack = newPositions)
-        _gameState.value = state
+
+        val newPositions = allyPositions.toMutableList()
+        val positionIndexPair = randomMove(
+            pieces = allyPieces,
+            turn = turn,
+            enemyPositions = enemyPositions,
+            enemyPieces = enemyPieces,
+            allyPositions = allyPositions
+        )
+        val newPosition = positionIndexPair.first
+        // a stalemate happens when a player has no moves
+        if (newPosition.isEmpty()) {
+            _gameState.value = state.copy(
+                gameEnded = true,
+                winner = null
+            )
+            return
+        }
+        newPositions[positionIndexPair.second] = newPosition
+
+        moveToNewPosition(
+            newPosition = newPosition,
+            turn = turn,
+            allyPositions = newPositions,
+            enemyPositions = enemyPositions,
+            enemyPieces = enemyPieces
+        )
     }
 
     private fun randomMove(
+        pieces: List<Piece>,
+        turn: Set,
+        enemyPositions: List<List<Int>>,
+        enemyPieces: List<Piece>,
+        allyPositions: List<List<Int>>
+    ): Pair<List<Int>, Int> {
+        val pieceIndexes = (0 until pieces.size).toList().shuffled()
+        var newPosition: List<Int> = emptyList()
+        var newPositionIndex = 0
+        for (i in 0 until pieceIndexes.size) {
+            val position = randomNextPosition(
+                    pieces[pieceIndexes[i]],
+                    turn,
+                    allyPositions[pieceIndexes[i]],
+                    enemyPositions,
+                    enemyPieces,
+                    allyPositions
+                )
+            if (position.isNotEmpty()) {
+                newPosition = position
+                newPositionIndex = pieceIndexes[i]
+                break
+            } else if (i == pieceIndexes.size - 1) {
+                emptyList<Int>()
+            }
+        }
+
+        return Pair(newPosition, newPositionIndex)
+    }
+
+    private fun randomNextPosition(
         piece: Piece,
+        turn: Set,
         currentPosition: List<Int>,
         enemyPositions: List<List<Int>>,
+        enemyPieces: List<Piece>,
         allyPositions: List<List<Int>>
     ): List<Int> {
         val possibleMoves = piece.getValidMovesPositions(
             Pair(currentPosition[0], currentPosition[1]), enemyPositions, allyPositions
         )
-        if (possibleMoves.isEmpty()) return currentPosition
+        if (possibleMoves.isEmpty()) return emptyList()
 
         val teamPositions = allyPositions - currentPosition
 
@@ -128,11 +135,66 @@ class GameViewModel(
             newPosition[0] in 0..7 && newPosition[1] in 0..7 && newPosition !in teamPositions
         }
 
-        if (validMoves.isEmpty()) return currentPosition
+        if (validMoves.isEmpty()) return emptyList()
 
         // Prioritize capturing enemy King
-        val enemyKingPos = enemyPositions[0]
-        return validMoves.find { it == enemyKingPos } ?: validMoves.random()
+        val enemyKingIndex = enemyPieces.indexOfFirst { it is King }
+        val kingKillMove = validMoves.find { it == enemyPositions[enemyKingIndex] }
+        return if(enemyKingIndex != -1 && kingKillMove != null) {
+            println("${turn.name} ${piece.name} takes King at $kingKillMove!")
+            kingKillMove
+        } else {
+            validMoves.random()
+        }
+    }
+
+    private fun moveToNewPosition(
+        newPosition: List<Int>,
+        turn: Set,
+        allyPositions: List<List<Int>>,
+        enemyPositions: List<List<Int>>,
+        enemyPieces: List<Piece>
+    ) {
+        var newState: GameUiState
+        val updatedEnemyPieces = enemyPieces.toMutableList()
+        val updatedEnemyPositions = enemyPositions.toMutableList()
+
+        // if piece is on top of the other color's piece (capturing),
+        // remove the other color's piece and its corresponding position
+        if(newPosition in enemyPositions) {
+            val pos = enemyPositions.indexOf(newPosition)
+            val removedPiece = updatedEnemyPieces.removeAt(pos)
+            updatedEnemyPositions.removeAt(pos)
+
+            if(removedPiece is King) {
+                val winner = if (turn == Set.WHITE) { "White" } else { "Black" }
+                newState = _gameState.value.copy(
+                    gameEnded = true,
+                    winner = winner
+                )
+                _gameState.value = newState
+                return
+            }
+        }
+
+        newState = when(turn) {
+            Set.WHITE -> {
+                _gameState.value.copy(
+                    piecesBlack = updatedEnemyPieces,
+                    positionsBlack = updatedEnemyPositions,
+                    positionsWhite = allyPositions
+                )
+            }
+            Set.BLACK -> {
+                _gameState.value.copy(
+                    piecesWhite = updatedEnemyPieces,
+                    positionsWhite = updatedEnemyPositions,
+                    positionsBlack = allyPositions
+                )
+            }
+        }
+
+        _gameState.value = newState
     }
 }
 

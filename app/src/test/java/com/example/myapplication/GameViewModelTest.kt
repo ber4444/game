@@ -9,7 +9,7 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceWhite within bounds and no overlap`() {
-        viewModel.moveRandomWhite()
+        viewModel.move(Set.WHITE)
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
@@ -19,7 +19,7 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceBlack within bounds and no overlap`() {
-        viewModel.moveRandomBlack()
+        viewModel.move(Set.BLACK)
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
 
@@ -30,8 +30,8 @@ class GameViewModelTest {
     @Test
     fun `play until game over and ensure no overlap`() {
         while(! viewModel.gameState.value.gameEnded) {
-            viewModel.moveRandomWhite()
-            viewModel.moveRandomBlack()
+            viewModel.move(Set.WHITE)
+            viewModel.move(Set.BLACK)
 
             val positionWhite = viewModel.gameState.value.positionsWhite.first()
             val positionBlack = viewModel.gameState.value.positionsBlack.first()
