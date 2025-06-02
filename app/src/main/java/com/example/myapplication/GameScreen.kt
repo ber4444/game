@@ -175,7 +175,7 @@ fun Board(
 }
 
 @Composable
-fun Piece(pieceModel: Piece) { // TODO animate the piece movement
+fun Piece(pieceModel: Piece) {
     Icon(
         painter = painterResource(id = pieceModel.asset),
         tint = Color.Unspecified,
@@ -202,8 +202,6 @@ fun AnimatedChessPiece(
     }
 
     LaunchedEffect(to) {
-        println("Current offsetXY: ${offsetX.value} ${offsetY.value}")
-        println("Animating from ${from[0]}, ${from[1]} to ${to[0]}, ${to[1]}")
         val yAnim = launch {
             offsetY.animateTo(to[0].toFloat(), animationSpec = tween(500))
         }
