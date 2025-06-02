@@ -21,6 +21,15 @@ data class GameUiState(
     val positionsBlack: List<List<Int>> = List(8) { listOf(0, it) }, // + List(8) { listOf(1, it) },
 
     val gameEnded: Boolean = false,
-    val winner: String? = null,
+    val winner: WinState = WinState.NONE,
+
+    val buttonLock: Boolean = false
 )
 
+enum class WinState {
+    NONE,
+    WHITE,
+    BLACK,
+    STALEMATE,
+    DRAW
+}

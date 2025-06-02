@@ -15,6 +15,9 @@ class GameViewModel(
     private val _gameState = MutableStateFlow(gameState)
     val gameState: StateFlow<GameUiState> = _gameState
 
+    private val _animState = MutableStateFlow(PieceAnimationState())
+    val animState: StateFlow<PieceAnimationState> = _animState
+
     private var gameMoves: Job? = null
 
     fun gameMover() {
@@ -22,14 +25,61 @@ class GameViewModel(
         gameMoves = viewModelScope.launch {
             delay(500)
             move(Set.WHITE)
-            delay(500)
-            move(Set.BLACK) // this is just for testing purposes, in a real game this would be user input
+            // this is just for testing purposes, in a real game this would be user input
             // also, it would account for whether you are in a check or checkmate or pinned situation
         }
     }
 
+    fun animationEnd() {
+        // ignore on init of board and if position gets updated without a piece
+        if (_animState.value.pieceToAnimate == null) return
+        val state = _gameState.value
+        val anim = _animState.value
+
+        when (state.turn) {
+            Set.WHITE -> {
+                val positions = state.positionsWhite.toMutableList()
+                val positionIndex = anim.pieceIndex
+                positions[positionIndex] = anim.animatePositionEnd
+                _gameState.value = state.copy(
+                    positionsWhite = positions
+                )
+            }
+            Set.BLACK -> {
+                val positions = state.positionsBlack.toMutableList()
+                val positionIndex = anim.pieceIndex
+                positions[positionIndex] = anim.animatePositionEnd
+                _gameState.value = state.copy(
+                    positionsBlack = positions
+                )
+            }
+        }
+
+        _animState.value = anim.copy(
+            pieceToAnimate = null
+        )
+
+        if (_gameState.value.turn != Set.BLACK) {
+            move(Set.BLACK)
+        } else {
+            _gameState.value = _gameState.value.copy(
+                buttonLock = false
+            )
+        }
+    }
+
+    fun resetGame() {
+        _gameState.value = GameUiState()
+        _animState.value = PieceAnimationState()
+    }
+
     @VisibleForTesting
     fun move(turn: Set) {
+        _gameState.value = _gameState.value.copy(
+            turn = turn,
+            buttonLock = true
+        )
+
         var state = _gameState.value
         val allyPositions: List<List<Int>>
         val allyPieces: List<Piece>
@@ -58,18 +108,18 @@ class GameViewModel(
 
         val newPositions = allyPositions.toMutableList()
         val positionIndexPair = randomMove(
-            pieces = allyPieces,
             turn = turn,
             enemyPositions = enemyPositions,
             enemyPieces = enemyPieces,
-            allyPositions = allyPositions
+            allyPositions = allyPositions,
+            allyPieces = allyPieces
         )
         val newPosition = positionIndexPair.first
         // a stalemate happens when a player has no moves
         if (newPosition.isEmpty()) {
             _gameState.value = state.copy(
                 gameEnded = true,
-                winner = null
+                winner = WinState.STALEMATE
             )
             return
         }
@@ -78,25 +128,47 @@ class GameViewModel(
         _gameState.value = deriveNewGameState(
             newPosition = newPosition,
             turn = turn,
-            allyPositions = newPositions,
             enemyPositions = enemyPositions,
             enemyPieces = enemyPieces
         )
+
+        // if someone won, stop all the animatin'
+        if (_gameState.value.winner != WinState.NONE) {
+            return
+        }
+
+        _animState.value = PieceAnimationState(
+            pieceToAnimate = allyPieces[positionIndexPair.second],
+            pieceIndex = positionIndexPair.second,
+            animatePositionStart = allyPositions[positionIndexPair.second],
+            animatePositionEnd = positionIndexPair.first
+        )
+        // temporarily remove piece
+        val mutableAllyPositions = allyPositions.toMutableList()
+        mutableAllyPositions[positionIndexPair.second] = listOf(-1,-1)
+        when (turn) {
+            Set.WHITE -> _gameState.value = _gameState.value.copy(
+                positionsWhite = mutableAllyPositions
+            )
+            Set.BLACK -> _gameState.value = _gameState.value.copy(
+                positionsBlack = mutableAllyPositions
+            )
+        }
     }
 
     private fun randomMove(
-        pieces: List<Piece>,
         turn: Set,
         enemyPositions: List<List<Int>>,
         enemyPieces: List<Piece>,
-        allyPositions: List<List<Int>>
+        allyPositions: List<List<Int>>,
+        allyPieces: List<Piece>
     ): Pair<List<Int>, Int> {
-        val pieceIndexes = (0 until pieces.size).toList().shuffled()
+        val pieceIndexes = (0 until allyPieces.size).toList().shuffled()
         var newPosition: List<Int> = emptyList()
         var newPositionIndex = 0
         for (i in 0 until pieceIndexes.size) {
             val position = randomNextPosition(
-                    pieces[pieceIndexes[i]],
+                allyPieces[pieceIndexes[i]],
                     turn,
                     allyPositions[pieceIndexes[i]],
                     enemyPositions,
@@ -151,7 +223,6 @@ class GameViewModel(
     private fun deriveNewGameState(
         newPosition: List<Int>,
         turn: Set,
-        allyPositions: List<List<Int>>,
         enemyPositions: List<List<Int>>,
         enemyPieces: List<Piece>
     ): GameUiState {
@@ -167,7 +238,12 @@ class GameViewModel(
             updatedEnemyPositions.removeAt(pos)
 
             if(removedPiece is King) {
-                val winner = if (turn == Set.WHITE) { "White" } else { "Black" }
+                val winner = if (turn == Set.WHITE) {
+                    WinState.WHITE
+                } else {
+                    WinState.BLACK
+                }
+
                 newState = _gameState.value.copy(
                     gameEnded = true,
                     winner = winner
@@ -180,15 +256,13 @@ class GameViewModel(
             Set.WHITE -> {
                 _gameState.value.copy(
                     piecesBlack = updatedEnemyPieces,
-                    positionsBlack = updatedEnemyPositions,
-                    positionsWhite = allyPositions
+                    positionsBlack = updatedEnemyPositions
                 )
             }
             Set.BLACK -> {
                 _gameState.value.copy(
                     piecesWhite = updatedEnemyPieces,
-                    positionsWhite = updatedEnemyPositions,
-                    positionsBlack = allyPositions
+                    positionsWhite = updatedEnemyPositions
                 )
             }
         }
