@@ -169,12 +169,12 @@ class GameViewModel(
         for (i in 0 until pieceIndexes.size) {
             val position = randomNextPosition(
                 allyPieces[pieceIndexes[i]],
-                    turn,
-                    allyPositions[pieceIndexes[i]],
-                    enemyPositions,
-                    enemyPieces,
-                    allyPositions
-                )
+                turn,
+                allyPositions[pieceIndexes[i]],
+                enemyPositions,
+                enemyPieces,
+                allyPositions
+            )
             if (position.isNotEmpty()) {
                 newPosition = position
                 newPositionIndex = pieceIndexes[i]
@@ -204,7 +204,19 @@ class GameViewModel(
 
         val validMoves = possibleMoves.filter { move ->
             val newPosition = listOf(move[0], move[1])
-            newPosition[0] in 0..7 && newPosition[1] in 0..7 && newPosition !in teamPositions
+            val validPosition = newPosition[0] in 0..7 &&
+                    newPosition[1] in 0..7 &&
+                    newPosition !in teamPositions
+            val kingDead = if (piece is King) {
+                piece.amIDead(
+                    position = Pair(move[0], move[1]),
+                    enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = allyPositions,
+                )
+            } else { false }
+
+            validPosition && !kingDead
         }
 
         if (validMoves.isEmpty()) return emptyList()

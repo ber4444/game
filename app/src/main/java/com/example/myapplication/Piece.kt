@@ -6,10 +6,10 @@ interface Piece {
     val set: Set
     val name: String
     val asset: Int
+
     fun getValidMovesPositions(position: Pair<Int, Int>,
                                enemyPositions: List<List<Int>>,
                                allyPositions: List<List<Int>>): List<List<Int>>
-
 }
 
 private fun Piece.validateUnboundMove(
@@ -66,6 +66,7 @@ class King(override val set: Set) : Piece {
         Set.WHITE -> R.drawable.king_light
         Set.BLACK -> R.drawable.king_dark
     }
+
     override fun getValidMovesPositions(
         position: Pair<Int, Int>,
         enemyPositions: List<List<Int>>,
@@ -86,13 +87,70 @@ class King(override val set: Set) : Piece {
         return moves
     }
 
-    private fun wouldIBeUnderAttack() {
-        // take a move
-        // verify if any opposing pieces can attack the king
-        // remove move?
+    fun amIDead(
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        enemyPieces: List<Piece>,
+        allyPositions: List<List<Int>>
+    ): Boolean {
+        val bishopMovement = listOf(Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1))
+        val rookMovement = listOf(Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1))
+        val knightMovement = listOf(
+            Pair(2, 1), Pair(1, 2), Pair(-1, 2), Pair(-2, 1),
+            Pair(-2, -1), Pair(-1, -2), Pair(1, -2), Pair(2, -1)
+        )
 
+        for (i in 0 until 4) {
+            var rookX = position.first + rookMovement[i].first
+            var rookY = position.second + rookMovement[i].second
+            var bishopX = position.first + bishopMovement[i].first
+            var bishopY = position.second + bishopMovement[i].second
+
+            while (rookX in 0..7 && rookY in 0..7) {
+                val pos = listOf(rookX, rookY)
+                if (enemyPositions.contains(pos)) { // if this space has a rook or queen, we're dead!
+                    val pieceIndex = enemyPositions.indexOfFirst { it == pos }
+                    when (enemyPieces[pieceIndex]) {
+                        is Queen, is Rook -> return true
+                    }
+                } else if (allyPositions.contains(pos)) { // friend is blocking!
+                    break
+                }
+                rookX += rookMovement[i].first
+                rookY += rookMovement[i].second
+            }
+
+            while (bishopX in 0..7 && bishopY in 0..7) {
+                val pos = listOf(bishopX, bishopY)
+                if (enemyPositions.contains(pos)) { // if this space has a bishop or queen, we're dead!
+                    val pieceIndex = enemyPositions.indexOfFirst { it == pos }
+                    when (enemyPieces[pieceIndex]) {
+                        is Queen, is Bishop -> return true
+                    }
+                } else if (allyPositions.contains(pos)) { // friend is blocking!
+                    break
+                }
+                // move in the direction and see if the next square is also good
+                bishopX += bishopMovement[i].first
+                bishopY += bishopMovement[i].second
+            }
+        }
+
+        for (direction in knightMovement) {
+            var x = position.first + direction.first
+            var y = position.second + direction.second
+            if (x in 0..7 && y in 0..7 && enemyPositions.contains(listOf(x, y))) {
+                val pieceIndex = enemyPositions.indexOfFirst { it == listOf(x, y) }
+                when (enemyPieces[pieceIndex]) {
+                    is Knight -> return true
+                }
+            }
+        }
+
+        return false
     }
 }
+
 @Immutable
 class Bishop(override val set: Set) : Piece {
     override val name = "Bishop"

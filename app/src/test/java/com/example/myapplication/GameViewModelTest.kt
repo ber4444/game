@@ -41,4 +41,108 @@ class GameViewModelTest {
             assertTrue("Pieces overlap", positionWhite != positionBlack)
         }
     }
+
+    @Test
+    fun `verify King is in a bad position`() {
+        val kingPosition = listOf(3,3)
+        val knightPositions = listOf(
+            listOf(1,2),listOf(1,4),listOf(2,1),listOf(2,5),
+            listOf(4,1),listOf(4,5),listOf(5,2),listOf(5,4)
+        )
+        val queenPositions = listOf(
+            listOf(1,1),listOf(1,3),listOf(1,5),listOf(3,1),
+            listOf(3,7),listOf(5,1),listOf(3,6),listOf(7,7)
+        )
+
+        val killingGameState = GameUiState(
+            positionsBlack = knightPositions + queenPositions,
+            positionsWhite = listOf(kingPosition),
+            piecesBlack = listOf(
+                Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),
+                Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),
+                Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),
+                Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),
+            ),
+            piecesWhite = listOf(King(Set.WHITE))
+        )
+
+        assertTrue(
+            (killingGameState.piecesWhite.first() as King).amIDead(
+                position = Pair(3,3),
+                enemyPositions = killingGameState.positionsBlack,
+                enemyPieces = killingGameState.piecesBlack,
+                allyPositions = killingGameState.positionsWhite
+            )
+        )
+    }
+
+    @Test
+    fun `the King is not safe from Knights`() {
+        val kingPositionPair = Pair(3,3)
+        val knightPositions = listOf(
+            listOf(1,2),listOf(1,4),listOf(2,1),listOf(2,5),
+            listOf(4,1),listOf(4,5),listOf(5,2),listOf(5,4)
+        )
+        val whitePositions = listOf(
+            listOf(1,3),listOf(2,2),listOf(2,3),listOf(2,4),
+            listOf(3,1),listOf(3,2),listOf(3,4),listOf(3,5),
+            listOf(4,2),listOf(4,3),listOf(4,4),listOf(5,3)
+        )
+
+        val killingGameState = GameUiState(
+            positionsBlack = knightPositions,
+            positionsWhite = whitePositions,
+            piecesBlack = listOf(
+                Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),
+                Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK),Knight(Set.BLACK)
+            ),
+            piecesWhite = listOf(King(Set.WHITE)) // we don't care about pieces, just locations
+        )
+
+        assertTrue(
+            "Knights should be able to capture King even when allies are in between",
+            (killingGameState.piecesWhite.first() as King).amIDead(
+                position = kingPositionPair,
+                enemyPositions = killingGameState.positionsBlack,
+                enemyPieces = killingGameState.piecesBlack,
+                allyPositions = killingGameState.positionsWhite
+            )
+        )
+    }
+
+    @Test
+    fun `the King is safe with allies blocking`() {
+        val kingPairPosition = Pair(3,3)
+        val whitePositions = listOf(
+            listOf(2,2),listOf(2,3),listOf(2,4),
+            listOf(3,2),listOf(3,4),
+            listOf(4,2),listOf(4,3),listOf(4,4)
+        )
+        val queenPositions = listOf(
+            listOf(1,1),listOf(1,3),listOf(1,5),listOf(3,1),
+            listOf(3,7),listOf(5,1),listOf(3,6),listOf(7,7)
+        )
+
+        val killingGameState = GameUiState(
+            positionsBlack = queenPositions,
+            positionsWhite = whitePositions,
+            piecesBlack = listOf(
+                Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),
+                Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),Queen(Set.BLACK),
+            ),
+            piecesWhite = listOf(King(Set.WHITE)) // we don't care about pieces, just locations
+        )
+
+        val kingIsDead = (killingGameState.piecesWhite.first() as King).amIDead(
+            position = kingPairPosition,
+            enemyPositions = killingGameState.positionsBlack,
+            enemyPieces = killingGameState.piecesBlack,
+            allyPositions = killingGameState.positionsWhite
+        )
+
+        assertTrue(
+            "Queens should be blocked by King's allies",
+            !kingIsDead
+        )
+    }
 }
