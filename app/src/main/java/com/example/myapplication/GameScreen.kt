@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
@@ -66,7 +67,8 @@ fun GameScreen(
             onClick = {
                 viewModel.gameMover()
             },
-            enabled = !gameState.gameEnded && !gameState.buttonLock  // button is enabled only when game has not ended
+            // button is enabled only when game has not ended and pieces are not currently animating
+            enabled = !gameState.gameEnded && !gameState.buttonLock
         ) {
             Text(text = stringResource(R.string.move_button), style = MaterialTheme.typography.titleLarge)
         }
@@ -82,6 +84,7 @@ fun GameScreen(
         if(gameState.gameEnded == true){
             Spacer(modifier = Modifier.padding(16.dp))
             Text(
+                modifier = Modifier.testTag("winnerText"),
                 text = stringResource(R.string.game_end_message, gameState.winner),
                 color = Color.Red,
                 style = MaterialTheme.typography.titleLarge
