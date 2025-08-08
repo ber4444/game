@@ -21,7 +21,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,9 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -43,11 +39,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun GameScreen(
-    windowSize: WindowWidthSizeClass,
     viewModel: GameViewModel
 ){
     val gameState by viewModel.gameState.collectAsState()
@@ -59,7 +58,7 @@ fun GameScreen(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.verticalScroll(scrollState)
     ) {
-        Board(gameState, animState, windowSize) { viewModel.animationEnd() }
+        Board(gameState, animState) { viewModel.animationEnd() }
 
         Spacer(modifier = Modifier.padding(16.dp))
 
@@ -70,7 +69,7 @@ fun GameScreen(
             // button is enabled only when game has not ended and pieces are not currently animating
             enabled = !gameState.gameEnded && !gameState.buttonLock
         ) {
-            Text(text = stringResource(R.string.move_button), style = MaterialTheme.typography.titleLarge)
+            Text(text = stringResource(Res.string.move_button), style = MaterialTheme.typography.titleLarge)
         }
 
         Button(
@@ -84,8 +83,7 @@ fun GameScreen(
         if(gameState.gameEnded == true){
             Spacer(modifier = Modifier.padding(16.dp))
             Text(
-                modifier = Modifier.testTag("winnerText"),
-                text = stringResource(R.string.game_end_message, gameState.winner),
+                text = stringResource(Res.string.game_end_message, gameState.winner),
                 color = Color.Red,
                 style = MaterialTheme.typography.titleLarge
             )
@@ -113,20 +111,13 @@ fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean, content: @Composa
 fun Board(
     state: GameUiState,
     animState: PieceAnimationState,
-    windowSize: WindowWidthSizeClass,
     animationEnd: () -> Unit
 ) {
     val squareSizePx = remember { mutableStateOf(IntSize.Zero) }
 
     Box(
         modifier = Modifier
-            .padding(
-                when (windowSize){
-                    WindowWidthSizeClass.Expanded -> 18.dp
-                    WindowWidthSizeClass.Medium -> 12.dp
-                    else -> 8.dp
-                }
-            )
+            .padding(8.dp)
     ) {
         Column {
             repeat(8) { row ->
@@ -180,7 +171,7 @@ fun Board(
 @Composable
 fun Piece(pieceModel: Piece) {
     Icon(
-        painter = painterResource(id = pieceModel.asset),
+        painter = painterResource(pieceModel.asset),
         tint = Color.Unspecified,
         contentDescription = pieceModel.asset.toString()
     )
