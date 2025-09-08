@@ -1,9 +1,11 @@
 package com.example.myapplication
 
+import androidx.compose.runtime.Immutable
+
 interface Piece {
     val set: Set
     val name: String
-    val asset: String
+    val asset: Int
 
     fun getValidMovesPositions(position: Pair<Int, Int>,
                                enemyPositions: List<List<Int>>,
@@ -57,11 +59,12 @@ enum class Set {
     WHITE, BLACK
 }
 
+@Immutable
 class King(override val set: Set) : Piece {
     override val name = "King"
-    override val asset: String = when (set) {
-        Set.WHITE -> "king_light.xml"
-        Set.BLACK -> "king_dark.xml"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.king_light
+        Set.BLACK -> R.drawable.king_dark
     }
 
     override fun getValidMovesPositions(
@@ -83,13 +86,77 @@ class King(override val set: Set) : Piece {
         }
         return moves
     }
+
+    fun amIDead(
+        position: Pair<Int, Int>,
+        enemyPositions: List<List<Int>>,
+        enemyPieces: List<Piece>,
+        allyPositions: List<List<Int>>
+    ): Boolean {
+        val bishopMovement = listOf(Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1))
+        val rookMovement = listOf(Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1))
+        val knightMovement = listOf(
+            Pair(2, 1), Pair(1, 2), Pair(-1, 2), Pair(-2, 1),
+            Pair(-2, -1), Pair(-1, -2), Pair(1, -2), Pair(2, -1)
+        )
+
+        for (i in 0 until 4) {
+            var rookX = position.first + rookMovement[i].first
+            var rookY = position.second + rookMovement[i].second
+            var bishopX = position.first + bishopMovement[i].first
+            var bishopY = position.second + bishopMovement[i].second
+
+            while (rookX in 0..7 && rookY in 0..7) {
+                val pos = listOf(rookX, rookY)
+                if (enemyPositions.contains(pos)) { // if this space has a rook or queen, we're dead!
+                    val pieceIndex = enemyPositions.indexOfFirst { it == pos }
+                    when (enemyPieces[pieceIndex]) {
+                        is Queen, is Rook -> return true
+                    }
+                } else if (allyPositions.contains(pos)) { // friend is blocking!
+                    break
+                }
+                rookX += rookMovement[i].first
+                rookY += rookMovement[i].second
+            }
+
+            while (bishopX in 0..7 && bishopY in 0..7) {
+                val pos = listOf(bishopX, bishopY)
+                if (enemyPositions.contains(pos)) { // if this space has a bishop or queen, we're dead!
+                    val pieceIndex = enemyPositions.indexOfFirst { it == pos }
+                    when (enemyPieces[pieceIndex]) {
+                        is Queen, is Bishop -> return true
+                    }
+                } else if (allyPositions.contains(pos)) { // friend is blocking!
+                    break
+                }
+                // move in the direction and see if the next square is also good
+                bishopX += bishopMovement[i].first
+                bishopY += bishopMovement[i].second
+            }
+        }
+
+        for (direction in knightMovement) {
+            var x = position.first + direction.first
+            var y = position.second + direction.second
+            if (x in 0..7 && y in 0..7 && enemyPositions.contains(listOf(x, y))) {
+                val pieceIndex = enemyPositions.indexOfFirst { it == listOf(x, y) }
+                when (enemyPieces[pieceIndex]) {
+                    is Knight -> return true
+                }
+            }
+        }
+
+        return false
+    }
 }
 
+@Immutable
 class Bishop(override val set: Set) : Piece {
     override val name = "Bishop"
-    override val asset: String = when (set) {
-        Set.WHITE -> "bishop_light.xml"
-        Set.BLACK -> "bishop_dark.xml"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.bishop_light
+        Set.BLACK -> R.drawable.bishop_dark
     }
 
     override fun getValidMovesPositions(
@@ -111,11 +178,12 @@ class Bishop(override val set: Set) : Piece {
     }
 
 }
+@Immutable
 class Knight(override val set: Set) : Piece {
     override val name = "Knight"
-    override val asset: String = when (set) {
-        Set.WHITE -> "knight_light.xml"
-        Set.BLACK -> "knight_dark.xml"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.knight_light
+        Set.BLACK -> R.drawable.knight_dark
     }
 
     override fun getValidMovesPositions(
@@ -138,11 +206,12 @@ class Knight(override val set: Set) : Piece {
         return moves
     }
 }
+@Immutable
 class Pawn(override val set: Set) : Piece {
     override val name = "Pawn"
-    override val asset: String = when (set) {
-        Set.WHITE -> "pawn_light.xml"
-        Set.BLACK -> "pawn_dark.xml"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.pawn_light
+        Set.BLACK -> R.drawable.pawn_dark
     }
 
     override fun getValidMovesPositions(
@@ -177,11 +246,12 @@ class Pawn(override val set: Set) : Piece {
     }
 
 }
+@Immutable
 class Queen(override val set: Set) : Piece {
     override val name = "Queen"
-    override val asset: String = when (set) {
-        Set.WHITE -> "queen_light.xml"
-        Set.BLACK -> "queen_dark.xml"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.queen_light
+        Set.BLACK -> R.drawable.queen_dark
     }
 
     override fun getValidMovesPositions(
@@ -208,11 +278,12 @@ class Queen(override val set: Set) : Piece {
         return moves
     }
 }
+@Immutable
 class Rook(override val set: Set) : Piece {
     override val name = "Rook"
-    override val asset: String = when (set) {
-        Set.WHITE -> "rook_light.xml"
-        Set.BLACK -> "rook_dark.xml"
+    override val asset: Int = when (set) {
+        Set.WHITE -> R.drawable.rook_light
+        Set.BLACK -> R.drawable.rook_dark
     }
 
     override fun getValidMovesPositions(
