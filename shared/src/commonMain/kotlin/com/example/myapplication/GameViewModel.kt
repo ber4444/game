@@ -1,8 +1,7 @@
 package com.example.myapplication
 
-import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +10,8 @@ import kotlinx.coroutines.launch
 
 class GameViewModel(
     gameState: GameUiState = GameUiState()
-) : ViewModel() {
+) {
+    private val viewModelScope = CoroutineScope(Dispatchers.Default)
     private val _gameState = MutableStateFlow(gameState)
     val gameState: StateFlow<GameUiState> = _gameState
 
@@ -73,7 +73,6 @@ class GameViewModel(
         _animState.value = PieceAnimationState()
     }
 
-    @VisibleForTesting
     fun move(turn: Set) {
         _gameState.value = _gameState.value.copy(
             turn = turn,
