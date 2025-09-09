@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Chess</string>
+    <string name="move_button">Move</string>
+    <string name="game_end_message">Game ended! %1$s wins!</string>
+</resources>
