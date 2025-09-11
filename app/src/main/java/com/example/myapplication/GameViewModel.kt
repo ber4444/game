@@ -20,13 +20,58 @@ class GameViewModel(
 
     private var gameMoves: Job? = null
 
+    // Update the gameState's autoPlay variable (used to start/stop AutoPlay mode)
+    fun setAutoPlay(newVal : Boolean) {
+        _gameState.value = gameState.value.copy(autoPlay = newVal)
+    }
+
+    // Update the game state's isMoving variable (used to pace AutoPlay mode)
+    fun setIsMoving(moving : Boolean) {
+        _gameState.value = gameState.value.copy(isMoving = moving)
+    }
+
+    // DEBUG: View gameState in the console (New move)
+    fun printMove(previousPositions : List<List<Int>>,
+        currentTurn : Set, currentPositions : List<List<Int>> = when(currentTurn) {
+        Set.BLACK -> _gameState.value.positionsBlack
+        Set.WHITE -> _gameState.value.positionsWhite
+    }, currentPieces : List<Piece> = when(currentTurn) {
+        Set.BLACK -> _gameState.value.piecesBlack
+        Set.WHITE -> _gameState.value.piecesWhite
+    }) {
+        // Figure out what the new move was TODO [CLEANUP]: Could just call inside move(), pass newPosition
+        val newMove = previousPositions.toSet().filter { it !in currentPositions.toSet() }
+        if(newMove.isEmpty()) { println("No move was made")}
+        else {
+            println("New move: $newMove")
+
+            val pieceIndex = previousPositions.indexOf(newMove[0])
+            val pieceType = currentPieces[pieceIndex].name
+
+            // ERROR: New position is still [-1, -1] here, fixed later
+            println("$currentTurn $pieceType (index $pieceIndex) moved from ${previousPositions[pieceIndex]} to ${currentPositions[pieceIndex]}")
+            //println("$currentTurn Team: $currentPositions")
+        }
+    }
+
     fun gameMover() {
         gameMoves?.cancel()
+
+        // Have the White team take its turn
+        val currentTurn = Set.WHITE
+        val previousPositions = when(currentTurn) {
+            Set.WHITE ->  _gameState.value.positionsWhite
+            Set.BLACK ->  _gameState.value.positionsBlack
+        }
         gameMoves = viewModelScope.launch {
-            delay(500)
-            move(Set.WHITE)
+            delay(500) // Matches AnimatedChessPiece's tween(500)
+            move(currentTurn) // TODO [CLEANUP]: rename to randomMove or AIMove to indicate it is unrelated to user input
             // this is just for testing purposes, in a real game this would be user input
             // also, it would account for whether you are in a check or checkmate or pinned situation
+
+            // ERROR: Not enough delay for 'cancel' Button to be effective
+            // TODO [UI]: Add delay to allow the User to press 'cancel' on AutoPlay mode before next turn occurs
+            //printMove(previousPositions, currentTurn)
         }
     }
 
@@ -62,8 +107,10 @@ class GameViewModel(
         if (_gameState.value.turn != Set.BLACK) {
             move(Set.BLACK)
         } else {
+            // Unlock the button, the current turn has been finished and animated
             _gameState.value = _gameState.value.copy(
-                buttonLock = false
+                buttonLock = false,
+                isMoving = false
             )
         }
     }
@@ -75,140 +122,143 @@ class GameViewModel(
 
     @VisibleForTesting
     fun move(turn: Set) {
+        // Update the gameState to reflect the current Team in play, disable buttons (prevent additional coroutines)
         _gameState.value = _gameState.value.copy(
             turn = turn,
-            buttonLock = true
+            buttonLock = true,
         )
 
-        var state = _gameState.value
+        // Depending on who's turn it is, different Ally and Enemy values are used
         val allyPositions: List<List<Int>>
         val allyPieces: List<Piece>
         val enemyPositions: List<List<Int>>
         val enemyPieces: List<Piece>
-
-        // Depending on who's turn it is, different values are used
         when (turn) {
             Set.WHITE -> {
-                allyPositions = state.positionsWhite
-                allyPieces = state.piecesWhite
-                enemyPositions = state.positionsBlack
-                enemyPieces = state.piecesBlack
+                allyPositions = _gameState.value.positionsWhite
+                allyPieces = _gameState.value.piecesWhite
+                enemyPositions = _gameState.value.positionsBlack
+                enemyPieces = _gameState.value.piecesBlack
             }
             Set.BLACK -> {
-                allyPositions = state.positionsBlack
-                allyPieces = state.piecesBlack
-                enemyPositions = state.positionsWhite
-                enemyPieces = state.piecesWhite
+                allyPositions = _gameState.value.positionsBlack
+                allyPieces = _gameState.value.piecesBlack
+                enemyPositions = _gameState.value.positionsWhite
+                enemyPieces = _gameState.value.piecesWhite
             }
         }
 
-        // trying to perform moves when there are no pieces crashes app, so return early
+        // Cannot perform moves when there are no pieces, return early
         // white can win while black is trying to take another turn, so bail if we know there is a winner
-        if(allyPieces.isEmpty() || state.gameEnded) {
+        if(allyPieces.isEmpty() || _gameState.value.gameEnded) {
             return
         }
 
-        val newPositions = allyPositions.toMutableList()
-        val shuffledIndexes = (0 until allyPieces.size).toList().shuffled()
         val positionIndexPair = randomMove(
             turn = turn,
             enemyPositions = enemyPositions,
             enemyPieces = enemyPieces,
             allyPositions = allyPositions,
-            allyPieces = allyPieces,
-            shuffledAllyIndexes = shuffledIndexes
+            allyPieces = allyPieces
         )
         val newPosition = positionIndexPair.first
+
         // a stalemate happens when a player has no moves
         if (newPosition.isEmpty()) {
-            _gameState.value = state.copy(
+            _gameState.value = _gameState.value.copy(
                 gameEnded = true,
                 winner = WinState.STALEMATE
             )
             return
         }
+
         // Update the position of the Piece
+        val newPositions = allyPositions.toMutableList()
         newPositions[positionIndexPair.second] = newPosition
 
+        // Update the game state, includes capturing of Pieces
         _gameState.value = deriveNewGameState(
             newPosition = newPosition,
+            pieceIndex = positionIndexPair.second,
             turn = turn,
+            enemyPieces =  enemyPieces,
             enemyPositions = enemyPositions,
-            enemyPieces = enemyPieces
+            allyPositions = allyPositions
         )
 
-        // if someone won, stop all the animatin'
+        // If someone won, skip updating of animation state
         if (_gameState.value.winner != WinState.NONE) {
+            // TODO [EXTRA]: Highlight Piece that will take the King/resulted in Checkmate
             return
         }
 
+        // Update the animation state
         _animState.value = PieceAnimationState(
             pieceToAnimate = allyPieces[positionIndexPair.second],
             pieceIndex = positionIndexPair.second,
             animatePositionStart = allyPositions[positionIndexPair.second],
             animatePositionEnd = positionIndexPair.first
         )
-        // temporarily remove piece
-        val mutableAllyPositions = allyPositions.toMutableList()
-        mutableAllyPositions[positionIndexPair.second] = listOf(-1,-1)
-        when (turn) {
-            Set.WHITE -> _gameState.value = _gameState.value.copy(
-                positionsWhite = mutableAllyPositions
-            )
-            Set.BLACK -> _gameState.value = _gameState.value.copy(
-                positionsBlack = mutableAllyPositions
-            )
-        }
     }
 
+    // Given game parameters, returns an updated version of the GameUIState
     private fun deriveNewGameState(
-        newPosition: List<Int>,
-        turn: Set,
+        pieceIndex : Int, // The index of the Ally Piece being moved
+        newPosition: List<Int>, // The new position of the Ally Piece
+        turn : Set,
+        enemyPieces : List<Piece>,
         enemyPositions: List<List<Int>>,
-        enemyPieces: List<Piece>
+        allyPositions : List<List<Int>>
     ): GameUiState {
-        var newState: GameUiState
-        val updatedEnemyPieces = enemyPieces.toMutableList()
-        val updatedEnemyPositions = enemyPositions.toMutableList()
+        // Will be updating the Enemy's Pieces (if capturing) and the position of the given Ally Piece
+        var mutableEnemyPieces = enemyPieces.toMutableList()
+        var mutableEnemyPositions = enemyPositions.toMutableList()
+        var mutableAllyPositions = allyPositions.toMutableList()
 
         // if piece is on top of the other color's piece (capturing),
         // remove the other color's piece and its corresponding position
         if(newPosition in enemyPositions) {
-            val pos = enemyPositions.indexOf(newPosition)
-            val removedPiece = updatedEnemyPieces.removeAt(pos)
-            updatedEnemyPositions.removeAt(pos)
+            // Remove the Enemy Piece from the game (both in Piece list and position list)
+            val index = enemyPositions.indexOf(newPosition)
+            val removedPiece = mutableEnemyPieces.removeAt(index)
+            mutableEnemyPositions.removeAt(index)
 
+            // TODO [EXTRA]: Chess always ends in Check/Checkmate, King doesn't have to be captured (update King's amIDead logic)
+            // TODO [EXTRA]: In randomNextPosition, if team is in Check, prioritize movement of the King/attacking Piece that is threatening the King
+            // If the King was taken,
             if(removedPiece is King) {
-                val winner = if (turn == Set.WHITE) {
-                    WinState.WHITE
-                } else {
-                    WinState.BLACK
-                }
-
-                newState = _gameState.value.copy(
+                // Update the gameState to reflect the winner
+                val winner = if(turn == Set.WHITE) WinState.WHITE else WinState.BLACK
+                return _gameState.value.copy(
                     gameEnded = true,
                     winner = winner
                 )
-                return newState
             }
         }
 
-        newState = when(turn) {
+        // TODO [BUG]: Where is the [-1, -1] position fixed (Piece placed back on board)?
+        //  The move function is incomplete and causes the test case issue (out of bounds at [-1, -1], not a randomNextPosition() issue)
+        // DEBUG: Removing this line results in an infinite loop on test (gameOver is never reached since both Teams run out of usable Pieces)
+        // Piece is put into an invalid position when it is being animated above the board to prevent duplicate
+        mutableAllyPositions[pieceIndex] = listOf(-1,-1)
+
+        // Otherwise, just update Pieces and their positions (only the enemy team could have lost a Piece)
+        return when(turn) {
             Set.WHITE -> {
                 _gameState.value.copy(
-                    piecesBlack = updatedEnemyPieces,
-                    positionsBlack = updatedEnemyPositions
+                    piecesBlack = mutableEnemyPieces,
+                    positionsBlack = mutableEnemyPositions,
+                    positionsWhite = mutableAllyPositions
                 )
             }
             Set.BLACK -> {
                 _gameState.value.copy(
-                    piecesWhite = updatedEnemyPieces,
-                    positionsWhite = updatedEnemyPositions
+                    piecesWhite = mutableEnemyPieces,
+                    positionsWhite = mutableEnemyPositions,
+                    positionsBlack = mutableAllyPositions
                 )
             }
         }
-
-        return newState
     }
 }
 

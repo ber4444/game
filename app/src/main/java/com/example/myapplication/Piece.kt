@@ -2,6 +2,8 @@ package com.example.myapplication
 
 import androidx.compose.runtime.Immutable
 
+// TODO [CLEANUP]: Replace hardcoded values (7) with a const (Board Size)
+
 // A chess piece
 interface Piece {
     val set: Set
@@ -24,7 +26,6 @@ private fun Piece.validateUnboundMove(
     var x = position.first + direction.first
     var y = position.second + direction.second
 
-    // TODO: Replace hardcoded values (7) with a const (Board Size)
     // While the new (x, y) position is on the board,
     while (x in 0..7 && y in 0..7) {
         val pos = listOf(x, y)
@@ -106,7 +107,7 @@ class King(override val set: Set) : Piece {
         enemyPieces: List<Piece>,
         allyPositions: List<List<Int>>
     ): Boolean {
-        // TODO: Does the King need to know if it is in Check? This seems like repeat logic. Move to Game?
+        // TODO [CLEANUP]: Does the King need to know if it is in Check? (exposes too much information about other Pieces and overall board state)
         val bishopMovement = listOf(Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1))
         val rookMovement = listOf(Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1))
         val knightMovement = listOf(

@@ -25,8 +25,7 @@ class MoveTest {
             enemyPositions = blackPositions,
             enemyPieces = blackPieces,
             allyPositions = whitePositions,
-            allyPieces = whitePieces,
-            shuffledAllyIndexes = whitePieces.indices.toList()
+            allyPieces = whitePieces
         )
 
         val x = abs(randomPosition.first[0] - whitePositions[0][0])
@@ -44,5 +43,4 @@ class MoveTest {
             kingDidNotMove
         )
     }
-
 }

@@ -36,9 +36,9 @@ class GameViewModelTest {
             val positionWhite = viewModel.gameState.value.positionsWhite.first()
             val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
-            assertTrue("White piece out of bounds at (${positionWhite[0]}, ${positionWhite[1]})", positionWhite[0] in 0..7 && positionWhite[1] in 0..7)
-            assertTrue("Black piece out of bounds at (${positionBlack[0]}, ${positionBlack[1]})", positionBlack[0] in 0..7 && positionBlack[1] in 0..7)
-            assertTrue("Pieces overlap at (${positionBlack[0]}, ${positionBlack[1]})", positionWhite != positionBlack)
+            assertTrue("White piece out of bounds", positionWhite[0] in 0..7 && positionWhite[1] in 0..7)
+            assertTrue("Black piece out of bounds", positionBlack[0] in 0..7 && positionBlack[1] in 0..7)
+            assertTrue("Pieces overlap", positionWhite != positionBlack)
         }
     }
 

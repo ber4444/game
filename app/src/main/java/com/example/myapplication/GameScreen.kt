@@ -59,10 +59,39 @@ fun GameScreen(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.verticalScroll(scrollState)
     ) {
+        // TODO [UI FEATURE]: Make into a floating window, more obvious to user and doesn't interrupt Column's flow
+        //       Show surviving king of the winning color with the win message
+        // Show which Set won the game
+        if(gameState.gameEnded == true){
+            Text(
+                modifier = Modifier.testTag("winnerText"),
+                text = stringResource(R.string.game_end_message, gameState.winner),
+                color = Color.Red,
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
+
+        // TODO [UI FEATURE]: Display possible moves for a selected Piece
+        // Display the Chess Board
         Board(gameState, animState, windowSize) { viewModel.animationEnd() }
 
-        Spacer(modifier = Modifier.padding(16.dp))
+        // Display a spacer
+        Spacer(modifier = Modifier.padding(8.dp))
 
+        // Display AutoPlay and cancel buttons
+        Text("Autoplay is ${if (gameState.autoPlay) "on" else "off"}")
+        Row {
+            Button(onClick = { viewModel.setAutoPlay(true) }, enabled = !gameState.gameEnded && !gameState.buttonLock && !gameState.autoPlay) { Text(text = "AutoPlay", style = MaterialTheme.typography.titleLarge)}
+            Button(onClick = { viewModel.setAutoPlay(false) }) { Text(text = "Cancel") }
+
+            // If autoplay is on, move a Piece (set isMoving -> True, reset when animation is complete)
+            if(gameState.autoPlay && !gameState.gameEnded && !gameState.isMoving) {
+                viewModel.gameMover()
+                viewModel.setIsMoving(true)
+            }
+        }
+
+        // Display the 'Move' Button
         Button(
             onClick = {
                 viewModel.gameMover()
@@ -73,22 +102,13 @@ fun GameScreen(
             Text(text = stringResource(R.string.move_button), style = MaterialTheme.typography.titleLarge)
         }
 
+        // Display the 'Reset' Button
         Button(
             onClick = {
                 viewModel.resetGame()
             }
         ) {
             Text("Reset")
-        }
-        
-        if(gameState.gameEnded == true){
-            Spacer(modifier = Modifier.padding(16.dp))
-            Text(
-                modifier = Modifier.testTag("winnerText"),
-                text = stringResource(R.string.game_end_message, gameState.winner),
-                color = Color.Red,
-                style = MaterialTheme.typography.titleLarge
-            )
         }
     }
 }
