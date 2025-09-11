@@ -2,7 +2,8 @@ package com.example.myapplication
 
 import androidx.compose.runtime.Immutable
 
-// TODO [CLEANUP]: Replace hardcoded values (7) with a const (Board Size)
+// A chess board is 8 x 8 squares
+const val BOARD_SIZE = 8
 
 // A chess piece
 interface Piece {
@@ -27,7 +28,7 @@ private fun Piece.validateUnboundMove(
     var y = position.second + direction.second
 
     // While the new (x, y) position is on the board,
-    while (x in 0..7 && y in 0..7) {
+    while (x in 0 until BOARD_SIZE && y in 0 until BOARD_SIZE) {
         val pos = listOf(x, y)
 
         if (allyPositions.contains(pos)) { // if we are bumping into an ally. stop. do not add.
@@ -59,7 +60,7 @@ private fun Piece.validateBoundMove(
     var y = position.second + direction.second
 
     // If the position is on the board AND an ally is not in that position,
-    if (x in 0..7 && y in 0..7 && !allyPositions.contains(listOf(x, y))) {
+    if (x in 0 until BOARD_SIZE && y in 0 until BOARD_SIZE && !allyPositions.contains(listOf(x, y))) {
         moves.add(listOf(x, y))
     }
 
@@ -121,7 +122,7 @@ class King(override val set: Set) : Piece {
             var bishopX = position.first + bishopMovement[i].first
             var bishopY = position.second + bishopMovement[i].second
 
-            while (rookX in 0..7 && rookY in 0..7) {
+            while (rookX in 0 until BOARD_SIZE && rookY in 0 until BOARD_SIZE) {
                 val pos = listOf(rookX, rookY)
                 if (enemyPositions.contains(pos)) { // if this space has a rook or queen, we're dead!
                     val pieceIndex = enemyPositions.indexOfFirst { it == pos }
@@ -135,7 +136,7 @@ class King(override val set: Set) : Piece {
                 rookY += rookMovement[i].second
             }
 
-            while (bishopX in 0..7 && bishopY in 0..7) {
+            while (bishopX in 0 until BOARD_SIZE && bishopY in 0 until BOARD_SIZE) {
                 val pos = listOf(bishopX, bishopY)
                 if (enemyPositions.contains(pos)) { // if this space has a bishop or queen, we're dead!
                     val pieceIndex = enemyPositions.indexOfFirst { it == pos }
@@ -154,7 +155,7 @@ class King(override val set: Set) : Piece {
         for (direction in knightMovement) {
             var x = position.first + direction.first
             var y = position.second + direction.second
-            if (x in 0..7 && y in 0..7 && enemyPositions.contains(listOf(x, y))) {
+            if (x in 0 until BOARD_SIZE && y in 0 until BOARD_SIZE && enemyPositions.contains(listOf(x, y))) {
                 val pieceIndex = enemyPositions.indexOfFirst { it == listOf(x, y) }
                 when (enemyPieces[pieceIndex]) {
                     is Knight -> return true
@@ -239,12 +240,12 @@ class Pawn(override val set: Set) : Piece {
 
         // Forward move
         val forward = listOf(position.first + dir, position.second)
-        if (forward[0] in 0..7 && forward !in allyPositions && forward !in enemyPositions) {
+        if (forward[0] in 0 until BOARD_SIZE && forward !in allyPositions && forward !in enemyPositions) {
             moves.add(forward)
             // Double move from start
             if (position.first == startRow) {
                 val doubleForward = listOf(position.first + 2 * dir, position.second)
-                if (doubleForward[0] in 0..7 && doubleForward !in allyPositions && doubleForward !in enemyPositions) {
+                if (doubleForward[0] in 0 until BOARD_SIZE && doubleForward !in allyPositions && doubleForward !in enemyPositions) {
                     moves.add(doubleForward)
                 }
             }
@@ -252,7 +253,7 @@ class Pawn(override val set: Set) : Piece {
         // Captures
         for (dc in listOf(-1, 1)) {
             val capture = listOf(position.first + dir, position.second + dc)
-            if (capture[0] in 0..7 && capture[1] in 0..7 && capture in enemyPositions) {
+            if (capture[0] in 0 until BOARD_SIZE && capture[1] in 0 until BOARD_SIZE && capture in enemyPositions) {
                 moves.add(capture)
             }
         }
@@ -310,7 +311,7 @@ class Rook(override val set: Set) : Piece {
         for ((dx, dy) in directions) {
             var x = position.first + dx
             var y = position.second + dy
-            while (x in 0..7 && y in 0..7) {
+            while (x in 0 until BOARD_SIZE && y in 0 until BOARD_SIZE) {
                 val pos = listOf(x, y)
                 if (!allyPositions.contains(pos)) {
                     moves.add(pos)

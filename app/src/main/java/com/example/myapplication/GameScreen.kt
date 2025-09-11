@@ -49,7 +49,7 @@ import kotlin.math.roundToInt
 fun GameScreen(
     windowSize: WindowWidthSizeClass,
     viewModel: GameViewModel
-){
+) {
     val gameState by viewModel.gameState.collectAsState()
     val animState by viewModel.animState.collectAsState()
     val scrollState = rememberScrollState()
@@ -62,7 +62,7 @@ fun GameScreen(
         // TODO [UI FEATURE]: Make into a floating window, more obvious to user and doesn't interrupt Column's flow
         //       Show surviving king of the winning color with the win message
         // Show which Set won the game
-        if(gameState.gameEnded == true){
+        if(gameState.gameEnded == true) {
             Text(
                 modifier = Modifier.testTag("winnerText"),
                 text = stringResource(R.string.game_end_message, gameState.winner),
@@ -78,28 +78,26 @@ fun GameScreen(
         // Display a spacer
         Spacer(modifier = Modifier.padding(8.dp))
 
-        // Display AutoPlay and cancel buttons
-        Text("Autoplay is ${if (gameState.autoPlay) "on" else "off"}")
-        Row {
-            Button(onClick = { viewModel.setAutoPlay(true) }, enabled = !gameState.gameEnded && !gameState.buttonLock && !gameState.autoPlay) { Text(text = "AutoPlay", style = MaterialTheme.typography.titleLarge)}
-            Button(onClick = { viewModel.setAutoPlay(false) }) { Text(text = "Cancel") }
-
-            // If autoplay is on, move a Piece (set isMoving -> True, reset when animation is complete)
-            if(gameState.autoPlay && !gameState.gameEnded && !gameState.isMoving) {
-                viewModel.gameMover()
-                viewModel.setIsMoving(true)
-            }
-        }
+        // Display the AutoPlay mode toggle
+        // TODO [UI FEATURE]: Change button color depending on gameState.autoPlay
+        // TODO [CLEANUP]: Move "AutoPlay" string to stringResource
+        Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
+        Button(
+            onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
+        ) { Text(text = "AutoPlay", style = MaterialTheme.typography.titleLarge) }
 
         // Display the 'Move' Button
         Button(
             onClick = {
                 viewModel.gameMover()
             },
-            // button is enabled only when game has not ended and pieces are not currently animating
+            // Button is enabled only when game has not ended and it is White's turn
             enabled = !gameState.gameEnded && !gameState.buttonLock
         ) {
-            Text(text = stringResource(R.string.move_button), style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = stringResource(R.string.move_button),
+                style = MaterialTheme.typography.titleLarge
+            )
         }
 
         // Display the 'Reset' Button
@@ -110,6 +108,11 @@ fun GameScreen(
         ) {
             Text("Reset")
         }
+    }
+    // If autoplay is on, the game hasn't ended, and there isn't a Piece being moved,
+    if(gameState.autoPlay && !gameState.gameEnded && animState.pieceToAnimate == null) {
+        // Move a White Piece
+        viewModel.gameMover()
     }
 }
 
@@ -149,38 +152,51 @@ fun Board(
             )
     ) {
         Column {
+            // TODO [CLEANUP]: Use BOARD_SIZE const instead of 8
             // A Column with 8 Rows
             repeat(8) { row ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     // Each Row has 8 Squares
                     repeat(8) { column ->
                         Square(
                             modifier = Modifier.onGloballyPositioned {
+                                // If this position is where an animation will start,
                                 if (animState.animatePositionStart[0] == row &&
-                                    animState.animatePositionStart[1] == column)
-                                squareSizePx.value = it.size
+                                    animState.animatePositionStart[1] == column) {
+
+                                    // Save the size of the red bounding square for the moving animation
+                                    squareSizePx.value = it.size
+                                }
                             },
                             (row + column) % 2 == 1) {
-                            // display a piece on the board if it exists at the given row and column
-                            // pair each white piece with its position
-                            // find the first pair where the position matches the current row and column
-                            // extract the piece from the pair if it exists
-                            val pieceWhite = state.piecesWhite
-                                .zip(state.positionsWhite)
-                                .firstOrNull { it.second == listOf(row, column) }
-                                ?.first
-                            
-                            val pieceBlack = state.piecesBlack
-                                .zip(state.positionsBlack)
-                                .firstOrNull{ it.second == listOf(row, column) }
-                                ?.first
+                            // Do not draw Pieces that are being animated
+                            if(animState.pieceToAnimate != null &&
+                                ((animState.animatePositionStart[0] == row &&
+                                  animState.animatePositionStart[1] == column) ||
+                                        (animState.animatePositionEnd[0] == row &&
+                                         animState.animatePositionEnd[1] == column))) {
+                                // TODO [EXTRA]: Change color of box?
+                            }
+                            else {
+                                // display a piece on the board if it exists at the given row and column
+                                // pair each white piece with its position
+                                // find the first pair where the position matches the current row and column
+                                // extract the piece from the pair if it exists
+                                val pieceWhite = state.piecesWhite.zip(state.positionsWhite)
+                                    .firstOrNull { it.second == listOf(row, column) }
+                                    ?.first
 
-                            pieceWhite?.let { Piece(pieceModel = it) } ?:
-                            pieceBlack?.let { Piece(pieceModel = it) }
+                                val pieceBlack = state.piecesBlack.zip(state.positionsBlack)
+                                    .firstOrNull { it.second == listOf(row, column) }
+                                    ?.first
+
+                                // Draw the icon of a White or Black Piece
+                                pieceWhite?.let { Piece(pieceModel = it) } ?:
+                                pieceBlack?.let { Piece(pieceModel = it) }
+                            }
                         }
                     }
                 }

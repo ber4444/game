@@ -25,92 +25,34 @@ class GameViewModel(
         _gameState.value = gameState.value.copy(autoPlay = newVal)
     }
 
-    // Update the game state's isMoving variable (used to pace AutoPlay mode)
-    fun setIsMoving(moving : Boolean) {
-        _gameState.value = gameState.value.copy(isMoving = moving)
-    }
-
-    // DEBUG: View gameState in the console (New move)
-    fun printMove(previousPositions : List<List<Int>>,
-        currentTurn : Set, currentPositions : List<List<Int>> = when(currentTurn) {
-        Set.BLACK -> _gameState.value.positionsBlack
-        Set.WHITE -> _gameState.value.positionsWhite
-    }, currentPieces : List<Piece> = when(currentTurn) {
-        Set.BLACK -> _gameState.value.piecesBlack
-        Set.WHITE -> _gameState.value.piecesWhite
-    }) {
-        // Figure out what the new move was TODO [CLEANUP]: Could just call inside move(), pass newPosition
-        val newMove = previousPositions.toSet().filter { it !in currentPositions.toSet() }
-        if(newMove.isEmpty()) { println("No move was made")}
-        else {
-            println("New move: $newMove")
-
-            val pieceIndex = previousPositions.indexOf(newMove[0])
-            val pieceType = currentPieces[pieceIndex].name
-
-            // ERROR: New position is still [-1, -1] here, fixed later
-            println("$currentTurn $pieceType (index $pieceIndex) moved from ${previousPositions[pieceIndex]} to ${currentPositions[pieceIndex]}")
-            //println("$currentTurn Team: $currentPositions")
-        }
-    }
-
+    // TODO [CLEANUP]: Rename to clarify White is taking turn
     fun gameMover() {
         gameMoves?.cancel()
 
         // Have the White team take its turn
-        val currentTurn = Set.WHITE
-        val previousPositions = when(currentTurn) {
-            Set.WHITE ->  _gameState.value.positionsWhite
-            Set.BLACK ->  _gameState.value.positionsBlack
-        }
         gameMoves = viewModelScope.launch {
             delay(500) // Matches AnimatedChessPiece's tween(500)
-            move(currentTurn) // TODO [CLEANUP]: rename to randomMove or AIMove to indicate it is unrelated to user input
+            move(Set.WHITE) // TODO [CLEANUP]: rename to randomMove or AIMove to indicate it is unrelated to user input
             // this is just for testing purposes, in a real game this would be user input
             // also, it would account for whether you are in a check or checkmate or pinned situation
-
-            // ERROR: Not enough delay for 'cancel' Button to be effective
-            // TODO [UI]: Add delay to allow the User to press 'cancel' on AutoPlay mode before next turn occurs
-            //printMove(previousPositions, currentTurn)
         }
     }
 
+    // TODO [CLEANUP]: Rename function to clarify another turn is being taken after the other team's Piece has been animated
     fun animationEnd() {
-        // ignore on init of board and if position gets updated without a piece
+        // Only continue if there is a Piece to animate, set to null to ensure no repeating
         if (_animState.value.pieceToAnimate == null) return
-        val state = _gameState.value
-        val anim = _animState.value
-
-        when (state.turn) {
-            Set.WHITE -> {
-                val positions = state.positionsWhite.toMutableList()
-                val positionIndex = anim.pieceIndex
-                positions[positionIndex] = anim.animatePositionEnd
-                _gameState.value = state.copy(
-                    positionsWhite = positions
-                )
-            }
-            Set.BLACK -> {
-                val positions = state.positionsBlack.toMutableList()
-                val positionIndex = anim.pieceIndex
-                positions[positionIndex] = anim.animatePositionEnd
-                _gameState.value = state.copy(
-                    positionsBlack = positions
-                )
-            }
-        }
-
-        _animState.value = anim.copy(
+        _animState.value = _animState.value.copy(
             pieceToAnimate = null
         )
 
+        // Move the Black Piece
         if (_gameState.value.turn != Set.BLACK) {
             move(Set.BLACK)
         } else {
-            // Unlock the button, the current turn has been finished and animated
+            // Unlock the UI buttons, the current turn has been finished and animated
             _gameState.value = _gameState.value.copy(
                 buttonLock = false,
-                isMoving = false
             )
         }
     }
@@ -236,13 +178,8 @@ class GameViewModel(
             }
         }
 
-        // TODO [BUG]: Where is the [-1, -1] position fixed (Piece placed back on board)?
-        //  The move function is incomplete and causes the test case issue (out of bounds at [-1, -1], not a randomNextPosition() issue)
-        // DEBUG: Removing this line results in an infinite loop on test (gameOver is never reached since both Teams run out of usable Pieces)
-        // Piece is put into an invalid position when it is being animated above the board to prevent duplicate
-        mutableAllyPositions[pieceIndex] = listOf(-1,-1)
-
-        // Otherwise, just update Pieces and their positions (only the enemy team could have lost a Piece)
+        // Update Pieces and their positions (only the enemy team could have lost a Piece)
+        mutableAllyPositions[pieceIndex] = newPosition
         return when(turn) {
             Set.WHITE -> {
                 _gameState.value.copy(
@@ -261,4 +198,3 @@ class GameViewModel(
         }
     }
 }
-

@@ -36,6 +36,11 @@ fun randomMove(
         }
     }
 
+    // TODO [UI BUG]: Sometimes there is an issues with Black Rooks that causes the game to pause (but resetting still works)
+    // TODO [UI BUG]: PieceIcon have different size ratio compared to board square depending on screen size
+    // DEBUG: Track movements
+    println("Moving ${turn.name} ${allyPieces[newPositionIndex].name} from ${allyPositions[newPositionIndex]} to ${newPosition}")
+
     // Return the newPosition to update the PositionIndex with
     return Pair(newPosition, newPositionIndex)
 }

@@ -35,8 +35,7 @@ data class GameUiState(
     val buttonLock: Boolean = false,
 
     // If the game is in 'AutoPlay' mode
-    val autoPlay : Boolean = false,
-    val isMoving : Boolean = false // If a piece is currently moving, similar logic to buttonLock // TODO [CLEANUP]: Could instead use animState's pieceToMove
+    val autoPlay : Boolean = false
 )
 
 // Current win state of the game
