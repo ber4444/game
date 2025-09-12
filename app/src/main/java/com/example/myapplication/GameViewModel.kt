@@ -25,6 +25,11 @@ class GameViewModel(
         _gameState.value = gameState.value.copy(autoPlay = newVal)
     }
 
+    // End the game in a draw
+    fun setGameOver() {
+        _gameState.value = gameState.value.copy(winState = WinState.DRAW)
+    }
+
     // TODO [CLEANUP]: Rename to clarify White is taking turn
     fun gameMover() {
         gameMoves?.cancel()
@@ -46,7 +51,7 @@ class GameViewModel(
             pieceToAnimate = null
         )
 
-        // Move the Black Piece
+        // Move a random Black Piece
         if (_gameState.value.turn != Set.BLACK) {
             move(Set.BLACK)
         } else {
@@ -58,6 +63,7 @@ class GameViewModel(
     }
 
     fun resetGame() {
+        println("Game reset")
         _gameState.value = GameUiState()
         _animState.value = PieceAnimationState()
     }
@@ -92,7 +98,7 @@ class GameViewModel(
 
         // Cannot perform moves when there are no pieces, return early
         // white can win while black is trying to take another turn, so bail if we know there is a winner
-        if(allyPieces.isEmpty() || _gameState.value.gameEnded) {
+        if(allyPieces.isEmpty() || _gameState.value.winState != WinState.NONE) {
             return
         }
 
@@ -108,8 +114,7 @@ class GameViewModel(
         // a stalemate happens when a player has no moves
         if (newPosition.isEmpty()) {
             _gameState.value = _gameState.value.copy(
-                gameEnded = true,
-                winner = WinState.STALEMATE
+                winState = WinState.STALEMATE
             )
             return
         }
@@ -129,7 +134,7 @@ class GameViewModel(
         )
 
         // If someone won, skip updating of animation state
-        if (_gameState.value.winner != WinState.NONE) {
+        if (_gameState.value.winState != WinState.NONE) {
             // TODO [EXTRA]: Highlight Piece that will take the King/resulted in Checkmate
             return
         }
@@ -172,8 +177,7 @@ class GameViewModel(
                 // Update the gameState to reflect the winner
                 val winner = if(turn == Set.WHITE) WinState.WHITE else WinState.BLACK
                 return _gameState.value.copy(
-                    gameEnded = true,
-                    winner = winner
+                    winState = winner
                 )
             }
         }

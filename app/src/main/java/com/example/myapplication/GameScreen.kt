@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -44,6 +48,8 @@ import androidx.compose.ui.zIndex
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.material3.Card
+import androidx.compose.ui.window.Dialog
 
 @Composable
 fun GameScreen(
@@ -59,16 +65,53 @@ fun GameScreen(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.verticalScroll(scrollState)
     ) {
-        // TODO [UI FEATURE]: Make into a floating window, more obvious to user and doesn't interrupt Column's flow
-        //       Show surviving king of the winning color with the win message
+
         // Show which Set won the game
-        if(gameState.gameEnded == true) {
-            Text(
-                modifier = Modifier.testTag("winnerText"),
-                text = stringResource(R.string.game_end_message, gameState.winner),
-                color = Color.Red,
-                style = MaterialTheme.typography.titleLarge
-            )
+        if(gameState.winState != WinState.NONE) {
+            // TODO [LOGIC]: Give more options to the user on the popup (close window, reset game, etc)
+            // When the window is dismissed, restart the game
+            val onDismiss = { viewModel.resetGame() }
+            PopupWindow(onDismiss) {
+                // Show the King of the winning Team, or indicate the game had no winner
+                val winIcon: Int
+                val gameEndMessageFormat: Int
+                when (gameState.winState) {
+                    WinState.NONE -> throw Exception("Invalid Game State")
+                    WinState.WHITE -> {
+                        winIcon = R.drawable.king_light
+                        gameEndMessageFormat = R.string.game_end_message_winner
+                    }
+
+                    WinState.BLACK -> {
+                        winIcon = R.drawable.king_dark
+                        gameEndMessageFormat = R.string.game_end_message_winner
+                    }
+
+                    WinState.DRAW, WinState.STALEMATE -> {
+                        winIcon = R.drawable.no_winner
+                        gameEndMessageFormat = R.string.game_end_message_no_winner
+                    }
+                }
+                Icon(
+                    painter = painterResource(id = winIcon),
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(50.dp),
+                    contentDescription = winIcon.toString()
+                )
+                Text(
+                    modifier = Modifier.testTag("winnerText"),
+                    text = stringResource(gameEndMessageFormat, gameState.winState),
+                    color = Color.Red,
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                // Prompt the user to reset the game
+                Button(
+                    onClick = { onDismiss() }
+                ) {
+                    Text(stringResource(R.string.reset_button))
+                }
+            }
         }
 
         // TODO [UI FEATURE]: Display possible moves for a selected Piece
@@ -80,11 +123,16 @@ fun GameScreen(
 
         // Display the AutoPlay mode toggle
         // TODO [UI FEATURE]: Change button color depending on gameState.autoPlay
-        // TODO [CLEANUP]: Move "AutoPlay" string to stringResource
+        //  or add a loading symbol next to it to show game is currently being played automatically
         Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
         Button(
             onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
-        ) { Text(text = "AutoPlay", style = MaterialTheme.typography.titleLarge) }
+        ) {
+            Text(
+                text = stringResource(R.string.autoplay_button),
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
 
         // Display the 'Move' Button
         Button(
@@ -92,7 +140,7 @@ fun GameScreen(
                 viewModel.gameMover()
             },
             // Button is enabled only when game has not ended and it is White's turn
-            enabled = !gameState.gameEnded && !gameState.buttonLock
+            enabled = gameState.winState == WinState.NONE && !gameState.buttonLock
         ) {
             Text(
                 text = stringResource(R.string.move_button),
@@ -106,16 +154,24 @@ fun GameScreen(
                 viewModel.resetGame()
             }
         ) {
-            Text("Reset")
+            Text(stringResource(R.string.reset_button))
+        }
+
+        // Display the 'End' Button
+        Button(
+            onClick = {
+                viewModel.setGameOver()
+            }
+        ) {
+            Text(stringResource(R.string.end_button))
         }
     }
     // If autoplay is on, the game hasn't ended, and there isn't a Piece being moved,
-    if(gameState.autoPlay && !gameState.gameEnded && animState.pieceToAnimate == null) {
+    if(gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null) {
         // Move a White Piece
         viewModel.gameMover()
     }
 }
-
 
 @Composable
 fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean, content: @Composable ()-> Unit) {
@@ -152,7 +208,6 @@ fun Board(
             )
     ) {
         Column {
-            // TODO [CLEANUP]: Use BOARD_SIZE const instead of 8
             // A Column with 8 Rows
             repeat(8) { row ->
                 Row(
@@ -178,7 +233,7 @@ fun Board(
                                   animState.animatePositionStart[1] == column) ||
                                         (animState.animatePositionEnd[0] == row &&
                                          animState.animatePositionEnd[1] == column))) {
-                                // TODO [EXTRA]: Change color of box?
+                                // TODO [EXTRA]: Change color of box to highlight current move?
                             }
                             else {
                                 // display a piece on the board if it exists at the given row and column
@@ -270,5 +325,32 @@ fun AnimatedChessPiece(
             .border(width = 1.dp, color = Color.Red)
     ) {
         Piece(pieceModel = piece)
+    }
+}
+
+// Creates a popup window with the specified dismiss action, content, Card height, Card corner roundness, and content padding values
+@Composable
+fun PopupWindow(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    val height = 200.dp
+    val cornerRoundness = 25.dp
+    val contentPadding = 15.dp
+
+    // Create a dialog, call onDismiss when the dialog is dismissed by the user
+    Dialog(onDismissRequest = { onDismiss() }) {
+        // Create a rounded Card
+        Card(
+            modifier = Modifier.fillMaxWidth().height(height),
+            shape = RoundedCornerShape(cornerRoundness),
+        ) {
+            // Show the given content in a column
+            Column(
+                modifier = Modifier.fillMaxSize()
+                    .padding(contentPadding)
+                    .wrapContentHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                content()
+            }
+        }
     }
 }

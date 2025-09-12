@@ -39,7 +39,7 @@ class GameScreenTest {
     fun testGameOver() {
         val testGameState = GameUiState(
             gameEnded = true,
-            winner = WinState.WHITE
+            winState = WinState.WHITE
         )
 
         composeTestRule.setContent {
@@ -55,7 +55,7 @@ class GameScreenTest {
 
         val winnerText = getInstrumentation().targetContext.getString(
             R.string.game_end_message,
-            testGameState.winner
+            testGameState.winState
         )
         composeTestRule.onNodeWithText(winnerText).assertIsDisplayed()
     }

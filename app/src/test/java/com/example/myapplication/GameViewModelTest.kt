@@ -1,7 +1,6 @@
 package com.example.myapplication
 
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 class GameViewModelTest {
@@ -29,7 +28,7 @@ class GameViewModelTest {
 
     @Test
     fun `play until game over and ensure no overlap`() {
-        while(! viewModel.gameState.value.gameEnded) {
+        while(viewModel.gameState.value.winState == WinState.NONE) {
             viewModel.move(Set.WHITE)
             viewModel.move(Set.BLACK)
 
