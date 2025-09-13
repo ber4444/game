@@ -8,7 +8,13 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceWhite within bounds and no overlap`() {
-        viewModel.move(Set.WHITE)
+        viewModel.move(Set.WHITE)  { turn: Set,
+            enemyPositions: List<List<Int>>,
+            enemyPieces: List<Piece>,
+            allyPositions: List<List<Int>>,
+            allyPieces: List<Piece> ->
+            pickMoveRandom(turn, enemyPositions, enemyPieces, allyPositions, allyPieces)
+        }
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
@@ -18,7 +24,13 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceBlack within bounds and no overlap`() {
-        viewModel.move(Set.BLACK)
+        viewModel.move(Set.BLACK) { turn: Set,
+            enemyPositions: List<List<Int>>,
+            enemyPieces: List<Piece>,
+            allyPositions: List<List<Int>>,
+            allyPieces: List<Piece> ->
+            pickMoveRandom(turn, enemyPositions, enemyPieces, allyPositions, allyPieces)
+        }
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
 
@@ -29,8 +41,20 @@ class GameViewModelTest {
     @Test
     fun `play until game over and ensure no overlap`() {
         while(viewModel.gameState.value.winState == WinState.NONE) {
-            viewModel.move(Set.WHITE)
-            viewModel.move(Set.BLACK)
+            viewModel.move(Set.WHITE) { turn: Set,
+                enemyPositions: List<List<Int>>,
+                enemyPieces: List<Piece>,
+                allyPositions: List<List<Int>>,
+                allyPieces: List<Piece> ->
+                pickMoveRandom(turn, enemyPositions, enemyPieces, allyPositions, allyPieces)
+            }
+            viewModel.move(Set.BLACK) { turn: Set,
+                enemyPositions: List<List<Int>>,
+                enemyPieces: List<Piece>,
+                allyPositions: List<List<Int>>,
+                allyPieces: List<Piece> ->
+                pickMoveRandom(turn, enemyPositions, enemyPieces, allyPositions, allyPieces)
+            }
 
             val positionWhite = viewModel.gameState.value.positionsWhite.first()
             val positionBlack = viewModel.gameState.value.positionsBlack.first()
@@ -66,8 +90,8 @@ class GameViewModelTest {
         )
 
         assertTrue(
-            (killingGameState.piecesWhite.first() as King).amIDead(
-                position = Pair(3,3),
+            checkCheck(
+                kingPosition = Pair(3,3),
                 enemyPositions = killingGameState.positionsBlack,
                 enemyPieces = killingGameState.piecesBlack,
                 allyPositions = killingGameState.positionsWhite
@@ -100,8 +124,8 @@ class GameViewModelTest {
 
         assertTrue(
             "Knights should be able to capture King even when allies are in between",
-            (killingGameState.piecesWhite.first() as King).amIDead(
-                position = kingPositionPair,
+            checkCheck(
+                kingPosition = kingPositionPair,
                 enemyPositions = killingGameState.positionsBlack,
                 enemyPieces = killingGameState.piecesBlack,
                 allyPositions = killingGameState.positionsWhite
@@ -132,8 +156,8 @@ class GameViewModelTest {
             piecesWhite = listOf(King(Set.WHITE)) // we don't care about pieces, just locations
         )
 
-        val kingIsDead = (killingGameState.piecesWhite.first() as King).amIDead(
-            position = kingPairPosition,
+        val kingIsDead = checkCheck(
+            kingPosition = kingPairPosition,
             enemyPositions = killingGameState.positionsBlack,
             enemyPieces = killingGameState.piecesBlack,
             allyPositions = killingGameState.positionsWhite

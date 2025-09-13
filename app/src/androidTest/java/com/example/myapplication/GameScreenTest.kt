@@ -38,7 +38,6 @@ class GameScreenTest {
     @Test
     fun testGameOver() {
         val testGameState = GameUiState(
-            gameEnded = true,
             winState = WinState.WHITE
         )
 
@@ -54,19 +53,21 @@ class GameScreenTest {
         }
 
         val winnerText = getInstrumentation().targetContext.getString(
-            R.string.game_end_message,
+            R.string.game_end_message_winner,
             testGameState.winState
         )
         composeTestRule.onNodeWithText(winnerText).assertIsDisplayed()
     }
 
+    // TODO [TEST]: Throws error since no Black Pieces are on the board
+    //  Stalemate - all possibleMoves lead to Check (can't move to put yourself in Check)
     @Test
     fun testStalemate() {
         // we're just going to fill the board to force a no move scenario
         val sixtyFourWhitePieces = List(64) { King(Set.WHITE) }
         val positions = mutableListOf<List<Int>>()
-        for (i in 0..7) {
-            for (j in 0..7) {
+        for (i in 0 until 8) {
+            for (j in 0 until 8) {
                 positions.add(listOf(i,j))
             }
         }
@@ -92,7 +93,7 @@ class GameScreenTest {
         composeTestRule.onNodeWithText("Move").performClick()
 
         val winnerText = getInstrumentation().targetContext.getString(
-            R.string.game_end_message,
+            R.string.game_end_message_no_winner,
             WinState.STALEMATE
         )
 
@@ -116,5 +117,4 @@ class GameScreenTest {
 
         composeTestRule.onNodeWithText(winnerText).assertIsDisplayed()
     }
-
 }

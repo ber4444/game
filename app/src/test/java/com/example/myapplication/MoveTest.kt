@@ -20,7 +20,7 @@ class MoveTest {
         val blackPieces = listOf(King(Set.BLACK))
         val blackPositions = listOf(listOf(7,7))
 
-        val randomPosition = randomMove(
+        val randomPosition = pickMoveRandom(
             turn = Set.WHITE,
             enemyPositions = blackPositions,
             enemyPieces = blackPieces,
@@ -43,4 +43,10 @@ class MoveTest {
             kingDidNotMove
         )
     }
+
+    // TODO [TEST]: Write more tests
+    // TODO [CLEANUP]: Rename move() to turn()? Clarify that things other than Piece movement are occurring
+    // - When there are no available moves, move() does not alter Piece positions, game over is updated
+    // - When in Check, move() does not alter Piece positions, game over is updated
+    // - When in Check, smarterRandom() prioritizes a move to escape Check
 }

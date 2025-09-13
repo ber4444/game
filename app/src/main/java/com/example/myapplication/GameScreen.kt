@@ -66,12 +66,11 @@ fun GameScreen(
         modifier = Modifier.verticalScroll(scrollState)
     ) {
 
-        // Show which Set won the game
-        if(gameState.winState != WinState.NONE) {
-            // TODO [LOGIC]: Give more options to the user on the popup (close window, reset game, etc)
-            // When the window is dismissed, restart the game
-            val onDismiss = { viewModel.resetGame() }
-            PopupWindow(onDismiss) {
+        // Show the gameOver window
+        if(gameState.winState != WinState.NONE && !animState.hideWindow) {
+            // When the user chooses, restart the game or hide the gameOver window
+            val resetGame = { reset : Boolean -> if(reset) { viewModel.resetGame() } else { viewModel.hideWindow() } }
+            PopupWindow(resetGame) {
                 // Show the King of the winning Team, or indicate the game had no winner
                 val winIcon: Int
                 val gameEndMessageFormat: Int
@@ -105,16 +104,21 @@ fun GameScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                // Prompt the user to reset the game
+                // Prompt the user to reset or review their game
                 Button(
-                    onClick = { onDismiss() }
+                    onClick = { resetGame(true) }
                 ) {
-                    Text(stringResource(R.string.reset_button))
+                    Text(stringResource(R.string.play_again_button))
+                }
+                Button(
+                    onClick = { resetGame(false) }
+                ) {
+                    Text(stringResource(R.string.cancel_button))
                 }
             }
         }
 
-        // TODO [UI FEATURE]: Display possible moves for a selected Piece
+        // TODO [UI]: Display possible moves for a selected Piece (user selected Piece as a variable in gameState)
         // Display the Chess Board
         Board(gameState, animState, windowSize) { viewModel.animationEnd() }
 
@@ -122,11 +126,12 @@ fun GameScreen(
         Spacer(modifier = Modifier.padding(8.dp))
 
         // Display the AutoPlay mode toggle
-        // TODO [UI FEATURE]: Change button color depending on gameState.autoPlay
+        // TODO [UI - EXTRA]: Change button color depending on gameState.autoPlay
         //  or add a loading symbol next to it to show game is currently being played automatically
         Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
         Button(
             onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
+            enabled = !gameState.buttonLock
         ) {
             Text(
                 text = stringResource(R.string.autoplay_button),
@@ -137,10 +142,10 @@ fun GameScreen(
         // Display the 'Move' Button
         Button(
             onClick = {
-                viewModel.gameMover()
+                viewModel.startUserTurn()
             },
             // Button is enabled only when game has not ended and it is White's turn
-            enabled = gameState.winState == WinState.NONE && !gameState.buttonLock
+            enabled = gameState.winState == WinState.NONE && !gameState.moveButtonLock
         ) {
             Text(
                 text = stringResource(R.string.move_button),
@@ -150,18 +155,15 @@ fun GameScreen(
 
         // Display the 'Reset' Button
         Button(
-            onClick = {
-                viewModel.resetGame()
-            }
+            onClick = { viewModel.resetGame() }
         ) {
             Text(stringResource(R.string.reset_button))
         }
 
         // Display the 'End' Button
         Button(
-            onClick = {
-                viewModel.setGameOver()
-            }
+            onClick = { viewModel.setGameOver() },
+            enabled = !gameState.buttonLock
         ) {
             Text(stringResource(R.string.end_button))
         }
@@ -169,7 +171,7 @@ fun GameScreen(
     // If autoplay is on, the game hasn't ended, and there isn't a Piece being moved,
     if(gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null) {
         // Move a White Piece
-        viewModel.gameMover()
+        viewModel.startUserTurn()
     }
 }
 
@@ -233,7 +235,7 @@ fun Board(
                                   animState.animatePositionStart[1] == column) ||
                                         (animState.animatePositionEnd[0] == row &&
                                          animState.animatePositionEnd[1] == column))) {
-                                // TODO [EXTRA]: Change color of box to highlight current move?
+                                // TODO [UI - EXTRA]: Change color of start/end square to highlight current move
                             }
                             else {
                                 // display a piece on the board if it exists at the given row and column
@@ -248,6 +250,7 @@ fun Board(
                                     .firstOrNull { it.second == listOf(row, column) }
                                     ?.first
 
+                                // TODO [UI - BUG]: PieceIcon has a different size ratio compared to board square depending on screen size
                                 // Draw the icon of a White or Black Piece
                                 pieceWhite?.let { Piece(pieceModel = it) } ?:
                                 pieceBlack?.let { Piece(pieceModel = it) }
@@ -301,6 +304,8 @@ fun AnimatedChessPiece(
         )
     }
 
+    // NOTE: Sometimes this section before animationEnd() has high lag (Davey!) on emulator
+    //println("Launch Piece") // DEBUG: Lag causing animationEnd() to not be called
     LaunchedEffect(to) {
         val yAnim = launch {
             offsetY.animateTo(to[0].toFloat(), animationSpec = tween(500))
@@ -330,13 +335,13 @@ fun AnimatedChessPiece(
 
 // Creates a popup window with the specified dismiss action, content, Card height, Card corner roundness, and content padding values
 @Composable
-fun PopupWindow(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+fun PopupWindow(onDismiss: (Boolean) -> Unit, content: @Composable () -> Unit) {
     val height = 200.dp
     val cornerRoundness = 25.dp
     val contentPadding = 15.dp
 
     // Create a dialog, call onDismiss when the dialog is dismissed by the user
-    Dialog(onDismissRequest = { onDismiss() }) {
+    Dialog(onDismissRequest = { onDismiss(false) }) {
         // Create a rounded Card
         Card(
             modifier = Modifier.fillMaxWidth().height(height),
