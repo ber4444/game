@@ -44,34 +44,9 @@ fun pickMoveCPU(
     allyPositions: List<Pair<Int, Int>>,
     allyPieces: List<Piece>
 ): Pair<Pair<Int, Int>, Int> {
-    // TODO [LOGIC - EXTRA]: Prioritize moves that will progress the game
-    //  such as capturing an Enemy Piece, putting the Enemy King in Check,
-    //  moving the Ally King out of Check or attacking/blocking the
-    //  Enemy Piece that is threatening the King
-
     // Determine all possible moves given the state of the board
     val allPossibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
     if(allPossibleMoves.isEmpty()) return Pair(INVALID_POSITION, -1)
-
-    // TODO [LOGIC]: Make isInCheck a gameState variable
-    //  (could also make Team a data class to hold Pieces, position, etc)
-    //  When in Check, must make a move that will get King out of Check
-    //  (otherwise Checkmate and the game is over)
-    // If in Check, find a move to escape Check (otherwise stalemate)
-    /*val escapeCheck = allPossibleMoves.filter { it }
-    if(escapeCheck.isEmpty()) {
-        return Pair(INVALID_POSITION, -1)
-    }*/
-
-    // [REMOVE]: King is never captured, just put in Check
-    // Prioritize capturing enemy King
-    val enemyKingIndex = enemyPieces.indexOfFirst { it is King }
-    /*
-    val kingKillMove = allPossibleMoves.find { it == enemyPositions[enemyKingIndex] }
-    if(enemyKingIndex != -1 && kingKillMove != null) {
-        println("${turn.name} ${allyPieces[kingKillMove.second].name} takes King at $kingKillMove!")
-        return kingKillMove
-    }*/
 
     // Focus on capturing enemy Pieces
     val captureMoves = allPossibleMoves.filter { it.first in enemyPositions }
@@ -145,8 +120,6 @@ fun checkCheck(
     // Using getPossibleMoves,
     val enemyMoves = getPossibleMoves(allyPositions, enemyPositions, enemyPieces)
 
-    // TODO [EXTRA]: Return list of Enemy Pieces that pose a risk to the King
-    //  [UI] Could highlight/animate an arrow showing the possible move
     // Return if the Piece is at risk by one or more Enemy Pieces
     return kingPosition in enemyMoves.map { it.first }
 

@@ -80,8 +80,6 @@ class King(override val set: Set) : Piece {
         Set.BLACK -> R.drawable.king_dark
     }
 
-    // TODO [EXTRA]: Add castling (if King & a Rook haven't moved, can perform left or right castle)
-
     override fun getValidMovesPositions(
         position: Pair<Int, Int>,
         enemyPositions: List<Pair<Int, Int>>,

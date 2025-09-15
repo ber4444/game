@@ -32,7 +32,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -49,6 +48,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.material3.Card
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.window.Dialog
@@ -71,8 +71,14 @@ fun GameScreen(
 
         // Show the gameOver window
         if(gameState.winState != WinState.NONE && !viewState.hideWindow) {
-            // When the user chooses, restart the game or hide the gameOver window
-            val resetGame = { reset : Boolean -> if(reset) { viewModel.resetGame() } else { viewModel.hideWindow() } }
+            // When the user dismisses the window, restart the game or hide the gameOver window (depending on button choice)
+            val resetGame = { reset: Boolean ->
+                if(reset) {
+                    viewModel.resetGame()
+                } else {
+                    viewModel.hideWindow()
+                }
+            }
             PopupWindow(resetGame) {
                 // Show the King of the winning Team, or indicate the game had no winner
                 val winIcon: Int
@@ -108,69 +114,75 @@ fun GameScreen(
                 )
 
                 // Prompt the user to reset or review their game
-                Button(
-                    onClick = { resetGame(true) }
-                ) {
-                    Text(stringResource(R.string.play_again_button))
-                }
-                Button(
-                    onClick = { resetGame(false) }
-                ) {
-                    Text(stringResource(R.string.cancel_button))
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    Button(
+                        modifier = Modifier.padding(5.dp),
+                        onClick = { resetGame(true) }
+                    ) {
+                        Text(stringResource(R.string.play_again_button))
+                    }
+                    Button(
+                        modifier = Modifier.padding(5.dp),
+                        onClick = { resetGame(false) }
+                    ) {
+                        Text(stringResource(R.string.cancel_button))
+                    }
                 }
             }
         }
 
-        // TODO [UI - EXTRA]: Display possible moves for a selected Piece (user selected Piece as a variable in gameState)
         // Display the Chess Board
         Board(gameState, animState, windowSize) { viewModel.animationEnd() }
 
         // Display a spacer
         Spacer(modifier = Modifier.padding(8.dp))
 
+
         // Display the AutoPlay mode toggle
-        // TODO [UI - EXTRA]: Change button color depending on gameState.autoPlay
-        //  or add a loading symbol next to it to show game is currently being played automatically
         Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
-        Button(
-            onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
-            enabled = !viewState.buttonLock
-        ) {
-            Text(
-                text = stringResource(R.string.autoplay_button),
-                style = MaterialTheme.typography.titleLarge
-            )
+
+        Row {
+            Button(
+                onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
+                enabled = !viewState.buttonLock
+            ) {
+                Text(
+                    text = stringResource(R.string.autoplay_button),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+
+            // Display the 'Move' Button
+            Button(
+                onClick = { viewModel.startUserTurn() },
+                // Button is enabled only when game has not ended and it is White's turn
+                enabled = gameState.winState == WinState.NONE && !viewState.moveButtonLock
+            ) {
+                Text(
+                    text = stringResource(R.string.move_button),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
         }
 
-        // Display the 'Move' Button
-        Button(
-            onClick = {
-                viewModel.startUserTurn()
-            },
-            // Button is enabled only when game has not ended and it is White's turn
-            enabled = gameState.winState == WinState.NONE && !viewState.moveButtonLock
-        ) {
-            Text(
-                text = stringResource(R.string.move_button),
-                style = MaterialTheme.typography.titleLarge
-            )
-        }
+        Row {
+            // Display the 'Reset' Button
+            Button(
+                onClick = { viewModel.resetGame() }
+            ) {
+                Text(stringResource(R.string.reset_button))
+            }
 
-        // Display the 'Reset' Button
-        Button(
-            onClick = { viewModel.resetGame() }
-        ) {
-            Text(stringResource(R.string.reset_button))
-        }
-
-        // Display the 'End' Button
-        Button(
-            onClick = { viewModel.setGameOver() },
-            enabled = !viewState.buttonLock
-        ) {
-            Text(stringResource(R.string.end_button))
+            // Display the 'End' Button
+            Button(
+                onClick = { viewModel.setGameOver() },
+                enabled = !viewState.buttonLock
+            ) {
+                Text(stringResource(R.string.end_button))
+            }
         }
     }
+
     // If autoplay is on, the game hasn't ended, and there isn't a Piece being moved,
     if(gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null) {
         // Move a White Piece
@@ -236,7 +248,6 @@ fun Board(
                             if(animState.pieceToAnimate != null &&
                                 ((animState.animatePositionStart == currentSquare) ||
                                         (animState.animatePositionEnd == currentSquare))) {
-                                // TODO [UI - EXTRA]: Change color of start/end square to highlight current move
                             }
                             else {
                                 // display a piece on the board if it exists at the given row and column
@@ -251,7 +262,6 @@ fun Board(
                                     .firstOrNull { it.second == Pair(row, column) }
                                     ?.first
 
-                                // TODO [UI - BUG]: PieceIcon has a different size ratio compared to board square depending on screen size
                                 // Draw the icon of a White or Black Piece
                                 pieceWhite?.let { Piece(pieceModel = it) } ?:
                                 pieceBlack?.let { Piece(pieceModel = it) }
@@ -321,7 +331,6 @@ fun AnimatedChessPiece(
         )
     }
 
-    // [BUG - FIXED]: When the to location is the same, the animation is skipped
     LaunchedEffect(from) {
         val yAnim = launch {
             offsetY.animateTo(to.first.toFloat(), animationSpec = tween(500))
@@ -350,119 +359,10 @@ fun AnimatedChessPiece(
     }
 }
 
-// TODO [UI]: If a Piece is being captured, add animation to it
-//  [BUG]: Secondary animation not occurring
-/*@Composable
-fun AnimateGame(
-    piece: Piece,
-    squareSizePx: IntSize,
-    from: Pair<Int, Int>,
-    to: Pair<Int, Int>,
-    animationEnd: () -> Unit,
-    capturedPiece : Piece?) {
-    val offsetY = remember(from) { Animatable(from.first.toFloat()) }
-    val offsetX = remember(from) { Animatable(from.second.toFloat()) }
-    val rotation = remember(0f) { Animatable(0f) }
-
-    val squareSizeDp = with(LocalDensity.current) {
-        DpSize(
-            width = squareSizePx.width.toDp(),
-            height = squareSizePx.height.toDp()
-        )
-    }
-
-    LaunchedEffect(from) {
-        val yAnim = launch {
-            offsetY.animateTo(to.first.toFloat(), animationSpec = tween(500))
-        }
-        val xAnim = launch {
-            offsetX.animateTo(to.second.toFloat(), animationSpec = tween(500))
-        }
-        val rotationAnim = launch {
-            rotation.animateTo(180f, animationSpec = tween(450))
-        }
-        joinAll(yAnim, xAnim, rotationAnim)
-        animationEnd()
-    }
-
-    // Draw a box with a Piece inside it
-    Box(
-        modifier = Modifier
-            .offset {
-                IntOffset(
-                    (offsetX.value * squareSizePx.width).roundToInt(),
-                    (offsetY.value * squareSizePx.height).roundToInt()
-                )
-            }
-            .size(squareSizeDp)
-            .zIndex(1f)
-            .border(width = 1.dp, color = Color.Red)
-    ) {
-        Piece(pieceModel = piece)
-    }
-
-    // If there is a Piece being captured,
-    if(capturedPiece != null) {
-        println("Piece has been captured!")
-        Box(
-            modifier = Modifier
-                .offset {
-                    IntOffset(
-                        (to.second * squareSizePx.width),
-                        (to.first * squareSizePx.height)
-                    )
-                }
-                .size(squareSizeDp)
-                .zIndex(1f)
-                .background(Color.Blue)
-                .border(width = 10.dp, color = Color.Magenta)
-        ) {
-            RotatingPiece(piece.asset, rotation.value)
-        }
-
-    }
-}
-
-@Composable
-fun CapturedChessPiece(
-    piece: Piece,
-    squareSizePx: IntSize,
-    position : Pair<Int, Int>) {
-    val rotation = remember(0f) { Animatable(0f) }
-
-    val squareSizeDp = with(LocalDensity.current) {
-        DpSize(
-            width = squareSizePx.width.toDp(),
-            height = squareSizePx.height.toDp()
-        )
-    }
-
-    LaunchedEffect(rotation) {
-        val rotationAnim = launch {
-            rotation.animateTo(180f, animationSpec = tween(450))
-        }
-        joinAll(rotationAnim)
-    }
-
-    Box(
-        modifier = Modifier
-            .offset {
-                IntOffset(
-                    (position.second * squareSizePx.width),
-                    (position.first * squareSizePx.height)
-                )
-            }
-            .size(squareSizeDp)
-            .zIndex(1f)
-            .background(Color.Blue)
-    ) {
-        RotatingPiece(piece.asset, rotation.value)
-    }
-}*/
-
-// Creates a popup window with the specified dismiss action, content, Card height, Card corner roundness, and content padding values
+// Creates a popup window with the specified dismiss action, and content
 @Composable
 fun PopupWindow(onDismiss: (Boolean) -> Unit, content: @Composable () -> Unit) {
+    // Card height, Card corner roundness, and content padding values are static
     val height = 200.dp
     val cornerRoundness = 25.dp
     val contentPadding = 15.dp

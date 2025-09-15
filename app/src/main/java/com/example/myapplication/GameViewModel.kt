@@ -59,7 +59,6 @@ class GameViewModel(
     }
 
     // Called after AnimatedChessPiece is finished moving a Piece from one position to another
-    // TODO [LOGIC - EXTRA]: Would need to be reworked (list of Pieces to move, remove one at a time) to add castling/multiple moving Pieces in one turn
     fun animationEnd() {
         // Only continue if there is a Piece being animated, immediately set to null to ensure no repeating
         if (_animState.value.pieceToAnimate == null) return
@@ -153,7 +152,6 @@ class GameViewModel(
             return
         }
 
-        // TODO [UI - EXTRA]: Highlight the square a King is on if it is in Check
         // Check occurs if a King can be attacked by the enemy
         // Checkmate occurs when there are no possible moves to escape Check
         //  Would require filtering possibleMoves or rechecking after movement to see if
