@@ -65,10 +65,10 @@ class GameScreenTest {
     fun testStalemate() {
         // we're just going to fill the board to force a no move scenario
         val sixtyFourWhitePieces = List(64) { King(Set.WHITE) }
-        val positions = mutableListOf<List<Int>>()
+        val positions = mutableListOf<Pair<Int, Int>>()
         for (i in 0 until 8) {
             for (j in 0 until 8) {
-                positions.add(listOf(i,j))
+                positions.add(Pair(i,j))
             }
         }
 

@@ -1,36 +1,35 @@
 package com.example.myapplication
 
+// Used to represent an invalid position on the board
+//  y and x values must always be between 0 and 8
+val INVALID_POSITION = Pair(-1, -1)
+
 // Return a randomly selected move
 fun pickMoveRandom(
-    turn: Set,
-    enemyPositions: List<List<Int>>,
+    enemyPositions: List<Pair<Int, Int>>,
     enemyPieces: List<Piece>,
-    allyPositions: List<List<Int>>,
+    allyPositions: List<Pair<Int, Int>>,
     allyPieces: List<Piece>
-): Pair<List<Int>, Int> {
-    // If no newPosition is assigned, returns an empty list (no possible move)
-    var newPosition: List<Int> = emptyList()
-    var newPositionIndex = 0
+): Pair<Pair<Int, Int>, Int> {
+    // If no newPosition is assigned, returns an invalid position (not a possible move)
+    var newPosition: Pair<Int, Int> = INVALID_POSITION
+    var newPositionIndex = -1
 
     // Go through the Pieces in a random order
     val shuffledAllyIndexes = (0 until allyPieces.size).toList().shuffled()
 
     // Going through all the ally Pieces,
     for (i in 0 until shuffledAllyIndexes.size) {
-        // Get a random move for the Piece to perform
-        val position = randomNextPosition(
-            allyPieces[shuffledAllyIndexes[i]],
-            turn,
-            allyPositions[shuffledAllyIndexes[i]],
-            enemyPositions,
-            enemyPieces,
-            allyPositions
-        )
-        // If there is a possible move,
-        if (position.isNotEmpty()) {
-            newPosition = position
+        // Get all possible moves for the Piece
+        val possibleMoves = allyPieces[shuffledAllyIndexes[i]].
+            getValidMovesPositions(allyPositions[shuffledAllyIndexes[i]], enemyPositions, allyPositions)
+
+        // If there are possible moves,
+        if (possibleMoves.isNotEmpty()) {
+            // Have the Piece take a random move
+            newPosition = possibleMoves.random()
             newPositionIndex = shuffledAllyIndexes[i]
-            break // Takes the first possible move
+            break // Break to return the random move
         }
     }
 
@@ -40,73 +39,64 @@ fun pickMoveRandom(
 
 // From the given list of moves, pick a move based on a CPU algorithm
 fun pickMoveCPU(
-    turn: Set,
-    enemyPositions: List<List<Int>>,
+    enemyPositions: List<Pair<Int, Int>>,
     enemyPieces: List<Piece>,
-    allyPositions: List<List<Int>>,
+    allyPositions: List<Pair<Int, Int>>,
     allyPieces: List<Piece>
-): Pair<List<Int>, Int>  {
+): Pair<Pair<Int, Int>, Int> {
     // TODO [LOGIC - EXTRA]: Prioritize moves that will progress the game
     //  such as capturing an Enemy Piece, putting the Enemy King in Check,
     //  moving the Ally King out of Check or attacking/blocking the
     //  Enemy Piece that is threatening the King
 
-    return pickMoveRandom(turn, enemyPositions, enemyPieces, allyPositions, allyPieces)
-}
+    // Determine all possible moves given the state of the board
+    val allPossibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
+    if(allPossibleMoves.isEmpty()) return Pair(INVALID_POSITION, -1)
 
-// TODO [CLEANUP]: Move logic to pickMoveCPU (filtering possible moves of Pieces to find best)
-//  Or move filter to getPossibleMoves with a parameter to decide which moves to get (all, evadeCheck, etc)
-fun randomNextPosition(
-    piece: Piece,
-    turn: Set,
-    currentPosition: List<Int>,
-    enemyPositions: List<List<Int>>,
-    enemyPieces: List<Piece>,
-    allyPositions: List<List<Int>>
-): List<Int> {
-    // For the given Piece, get its possible moves
-    val possibleMoves = piece.getValidMovesPositions(
-        Pair(currentPosition[0], currentPosition[1]), enemyPositions, allyPositions
-    )
-    if (possibleMoves.isEmpty()) return emptyList()
+    // TODO [LOGIC]: Make isInCheck a gameState variable
+    //  (could also make Team a data class to hold Pieces, position, etc)
+    //  When in Check, must make a move that will get King out of Check
+    //  (otherwise Checkmate and the game is over)
+    // If in Check, find a move to escape Check (otherwise stalemate)
+    /*val escapeCheck = allPossibleMoves.filter { it }
+    if(escapeCheck.isEmpty()) {
+        return Pair(INVALID_POSITION, -1)
+    }*/
 
-    // Check if the Piece can move (filter possible moves to moves it can actually take)
-    val validMoves = possibleMoves.filter { move ->
-        // TODO [CLEANUP]: Move Ally/Enemy collision logic here to reduce parameters passed in Piece.getValidMovesPositions
-        //val teamPositions = allyPositions - currentPosition
-
-        // TODO [LOGIC]: Make isInCheck a gameState variable (could also make Team a data class to hold Pieces, position, etc),
-        //  When in Check, must make a move that will get King out of Check (otherwise Checkmate and the game is over)
-
-        // TEMP
-        true
-    }
-
-    if (validMoves.isEmpty()) return emptyList()
-
+    // [REMOVE]: King is never captured, just put in Check
     // Prioritize capturing enemy King
     val enemyKingIndex = enemyPieces.indexOfFirst { it is King }
-    val kingKillMove = validMoves.find { it == enemyPositions[enemyKingIndex] }
-    return if(enemyKingIndex != -1 && kingKillMove != null) {
-        println("${turn.name} ${piece.name} takes King at $kingKillMove!")
-        kingKillMove
-    } else {
-        validMoves.random()
+    /*
+    val kingKillMove = allPossibleMoves.find { it == enemyPositions[enemyKingIndex] }
+    if(enemyKingIndex != -1 && kingKillMove != null) {
+        println("${turn.name} ${allyPieces[kingKillMove.second].name} takes King at $kingKillMove!")
+        return kingKillMove
+    }*/
+
+    // Focus on capturing enemy Pieces
+    val captureMoves = allPossibleMoves.filter { it.first in enemyPositions }
+    if(captureMoves.isNotEmpty()) {
+        return captureMoves.random()
     }
+
+    // Otherwise, return a random possible move
+    return allPossibleMoves.random()
 }
 
-// Allow the User to pick a move
+// TODO [LOGIC]: Use different functions to do board status check and movement
+//  (hasTakenTurn = !Winner && pickedMove != null && pickedMove != InvalidMove)
+//  when hasTakenTurn, swap current team and do next board status check and movement calls
+// Allow the user to pick a move
 fun pickMoveUser(
-    turn: Set,
-    enemyPositions: List<List<Int>>,
+    enemyPositions: List<Pair<Int, Int>>,
     enemyPieces: List<Piece>,
-    allyPositions: List<List<Int>>,
+    allyPositions: List<Pair<Int, Int>>,
     allyPieces: List<Piece>
-): Pair<List<Int>, Int> {
+): Pair<Pair<Int, Int>, Int> {
     // TEMP: Returns a randomly picked move
-    return pickMoveRandom(turn, enemyPositions, enemyPieces, allyPositions, allyPieces)
+    return pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
 
-    val pickedMove : Pair<List<Int>, Int> = Pair(emptyList(), 0)
+    val pickedMove : Pair<Pair<Int, Int>, Int> = Pair(INVALID_POSITION, -1)
 
     // TODO [UI - LOGIC]: Show user the possible moves for Pieces they click/tap on
     //  tracking: currentPiece, piecePossibleMoves, hasTakenTurn. Only return pick when hasTakenTurn
@@ -114,26 +104,23 @@ fun pickMoveUser(
     return pickedMove
 }
 
-// Get the possible moves for all Ally Pieces
+// Get the possible moves for all ally Pieces
 fun getPossibleMoves(
-    enemyPositions: List<List<Int>>,
-    //enemyPieces: List<Piece>, // Could pass to getValidMoves to determine if a taken move would put the Enemy King in Check (not efficient, only needed for CPU)
-    allyPositions: List<List<Int>>,
-    allyPieces: List<Piece>) : List<Pair<List<Int>, Int>> {
+    enemyPositions: List<Pair<Int, Int>>,
+    //enemyPieces: List<Piece>, // [REMOVE]: Could pass to getValidMoves to determine if a taken move would put the Enemy King in Check (not efficient, only needed for CPU)
+    allyPositions: List<Pair<Int, Int>>,
+    allyPieces: List<Piece>) : List<Pair<Pair<Int, Int>, Int>> {
     // Determine what moves are possible for the given team, given the board information
-    val possibleMoves : MutableList<Pair<List<Int>, Int>> = mutableListOf() // List of (Position, PieceIndex) pairs
+    val possibleMoves : MutableList<Pair<Pair<Int, Int>, Int>> = mutableListOf() // List of (Position(y, x), PieceIndex) pairs
 
     // For every allied Piece,
     for(pieceIndex in 0 until allyPieces.size) {
-        // Determine the current Piece's possible moves
+        // Determine the current Piece's possible move locations
         val pieceType = allyPieces[pieceIndex]
-        val currentPosition = Pair(allyPositions[pieceIndex][0], allyPositions[pieceIndex][1])
+        val allyPosition = allyPositions[pieceIndex]
+        val pieceMoves = pieceType.getValidMovesPositions(allyPosition, enemyPositions, allyPositions)
 
-        // TODO [CLEANUP]: Make Move a class? (set, pieceIndex : Int, startPosition : List<Int> or Pair<Int, Int>, EndPosition)
-        //  Could also add booleans for capturesPiece and resultsInCheck, allowing the CPU to make smarter Moves
-        val pieceMoves = pieceType.getValidMovesPositions(currentPosition, enemyPositions, allyPositions)
-
-        // Add the moves
+        // Add each possible location, paired with the current pieceIndex
         for (move in pieceMoves) {
             possibleMoves += Pair(move, pieceIndex)
         }
@@ -141,23 +128,27 @@ fun getPossibleMoves(
     return possibleMoves
 }
 
-// Tell if the King is in Check
+// Return if the King is in Check/Checkmate
 fun checkCheck(
     kingPosition : Pair<Int, Int>,
-    enemyPositions: List<List<Int>>,
+    enemyPositions: List<Pair<Int, Int>>,
     enemyPieces: List<Piece>,
-    allyPositions: List<List<Int>>
+    allyPositions: List<Pair<Int, Int>>
 ): Boolean {
     // DEBUG: When is Check looked for, [BUG] sometimes movement happens after a move resulting in Check
-    println("Checking ${kingPosition}..")
+    //println("Checking King at ${kingPosition}..")
 
     // TODO [EFFICIENCY]: Rewrite King.amIDead logic to check if anyone can get to the King
     //  instead of checking all Enemy movement with getPossibleMoves
     //  Can use enemyPieces to determine what types of moves to look for
     //  (if no queens or bishops, don't need to check diagonals)
-    // Using getPossibleMoves
+    // Using getPossibleMoves,
     val enemyMoves = getPossibleMoves(allyPositions, enemyPositions, enemyPieces)
-    return kingPosition in enemyMoves.map { Pair(it.first[0], it.first[1]) }
+
+    // TODO [EXTRA]: Return list of Enemy Pieces that pose a risk to the King
+    //  [UI] Could highlight/animate an arrow showing the possible move
+    // Return if the Piece is at risk by one or more Enemy Pieces
+    return kingPosition in enemyMoves.map { it.first }
 
     // Logic from previous King.amIDead
     // Ignores Pawns and the opposing King (explicitly checks Enemy Piece type)

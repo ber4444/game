@@ -49,6 +49,8 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.material3.Card
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.window.Dialog
 
 @Composable
@@ -58,6 +60,7 @@ fun GameScreen(
 ) {
     val gameState by viewModel.gameState.collectAsState()
     val animState by viewModel.animState.collectAsState()
+    val viewState by viewModel.viewState.collectAsState()
     val scrollState = rememberScrollState()
 
     Column(
@@ -67,7 +70,7 @@ fun GameScreen(
     ) {
 
         // Show the gameOver window
-        if(gameState.winState != WinState.NONE && !animState.hideWindow) {
+        if(gameState.winState != WinState.NONE && !viewState.hideWindow) {
             // When the user chooses, restart the game or hide the gameOver window
             val resetGame = { reset : Boolean -> if(reset) { viewModel.resetGame() } else { viewModel.hideWindow() } }
             PopupWindow(resetGame) {
@@ -118,7 +121,7 @@ fun GameScreen(
             }
         }
 
-        // TODO [UI]: Display possible moves for a selected Piece (user selected Piece as a variable in gameState)
+        // TODO [UI - EXTRA]: Display possible moves for a selected Piece (user selected Piece as a variable in gameState)
         // Display the Chess Board
         Board(gameState, animState, windowSize) { viewModel.animationEnd() }
 
@@ -131,7 +134,7 @@ fun GameScreen(
         Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
         Button(
             onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
-            enabled = !gameState.buttonLock
+            enabled = !viewState.buttonLock
         ) {
             Text(
                 text = stringResource(R.string.autoplay_button),
@@ -145,7 +148,7 @@ fun GameScreen(
                 viewModel.startUserTurn()
             },
             // Button is enabled only when game has not ended and it is White's turn
-            enabled = gameState.winState == WinState.NONE && !gameState.moveButtonLock
+            enabled = gameState.winState == WinState.NONE && !viewState.moveButtonLock
         ) {
             Text(
                 text = stringResource(R.string.move_button),
@@ -163,7 +166,7 @@ fun GameScreen(
         // Display the 'End' Button
         Button(
             onClick = { viewModel.setGameOver() },
-            enabled = !gameState.buttonLock
+            enabled = !viewState.buttonLock
         ) {
             Text(stringResource(R.string.end_button))
         }
@@ -218,11 +221,11 @@ fun Board(
                 ) {
                     // Each Row has 8 Squares
                     repeat(8) { column ->
+                        val currentSquare = Pair(row, column)
                         Square(
                             modifier = Modifier.onGloballyPositioned {
                                 // If this position is where an animation will start,
-                                if (animState.animatePositionStart[0] == row &&
-                                    animState.animatePositionStart[1] == column) {
+                                if (animState.animatePositionStart == currentSquare) {
 
                                     // Save the size of the red bounding square for the moving animation
                                     squareSizePx.value = it.size
@@ -231,10 +234,8 @@ fun Board(
                             (row + column) % 2 == 1) {
                             // Do not draw Pieces that are being animated
                             if(animState.pieceToAnimate != null &&
-                                ((animState.animatePositionStart[0] == row &&
-                                  animState.animatePositionStart[1] == column) ||
-                                        (animState.animatePositionEnd[0] == row &&
-                                         animState.animatePositionEnd[1] == column))) {
+                                ((animState.animatePositionStart == currentSquare) ||
+                                        (animState.animatePositionEnd == currentSquare))) {
                                 // TODO [UI - EXTRA]: Change color of start/end square to highlight current move
                             }
                             else {
@@ -243,11 +244,11 @@ fun Board(
                                 // find the first pair where the position matches the current row and column
                                 // extract the piece from the pair if it exists
                                 val pieceWhite = state.piecesWhite.zip(state.positionsWhite)
-                                    .firstOrNull { it.second == listOf(row, column) }
+                                    .firstOrNull { it.second == Pair(row, column) }
                                     ?.first
 
                                 val pieceBlack = state.piecesBlack.zip(state.positionsBlack)
-                                    .firstOrNull { it.second == listOf(row, column) }
+                                    .firstOrNull { it.second == Pair(row, column) }
                                     ?.first
 
                                 // TODO [UI - BUG]: PieceIcon has a different size ratio compared to board square depending on screen size
@@ -263,14 +264,20 @@ fun Board(
 
         // If there is a Piece to animate,
         if (animState.pieceToAnimate != null) {
-            // Animate the given Piece's movement, from -> to
-            AnimatedChessPiece(
-                piece = animState.pieceToAnimate,
-                squareSizePx = squareSizePx.value,
-                from = animState.animatePositionStart,
-                to = animState.animatePositionEnd,
-                animationEnd = animationEnd
-            )
+            // DEBUG: Set to true to move to next turn without animating
+            val skipAnim = false
+            if(skipAnim) { animationEnd() }
+            else {
+                if(animState.moveIsValid()) {
+                    AnimatedChessPiece(piece = animState.pieceToAnimate,
+                        squareSizePx = squareSizePx.value,
+                        from = animState.animatePositionStart,
+                        to = animState.animatePositionEnd,
+                        animationEnd = animationEnd)
+                } else {
+                    throw Exception("Invalid move")
+                }
+            }
         }
     }
 }
@@ -285,17 +292,27 @@ fun Piece(pieceModel: Piece) {
     )
 }
 
+@Composable
+fun RotatingPiece(pieceIcon : Int, rotation: Float) {
+    Icon(
+        painter = painterResource(id = pieceIcon),
+        tint = Color.Unspecified,
+        contentDescription = pieceIcon.toString(),
+        modifier = Modifier.graphicsLayer { rotationZ = rotation}
+    )
+}
+
 // A chess Piece that is being animated
 @Composable
 fun AnimatedChessPiece(
     piece: Piece,
     squareSizePx: IntSize,
-    from: List<Int>,
-    to: List<Int>,
+    from: Pair<Int, Int>,
+    to: Pair<Int, Int>,
     animationEnd: () -> Unit
 ) {
-    val offsetX = remember(from) { Animatable(from[1].toFloat()) } // pos is row, col
-    val offsetY = remember(from) { Animatable(from[0].toFloat()) }
+    val offsetY = remember(from) { Animatable(from.first.toFloat()) }
+    val offsetX = remember(from) { Animatable(from.second.toFloat()) }
 
     val squareSizeDp = with(LocalDensity.current) {
         DpSize(
@@ -304,19 +321,19 @@ fun AnimatedChessPiece(
         )
     }
 
-    // NOTE: Sometimes this section before animationEnd() has high lag (Davey!) on emulator
-    //println("Launch Piece") // DEBUG: Lag causing animationEnd() to not be called
-    LaunchedEffect(to) {
+    // [BUG - FIXED]: When the to location is the same, the animation is skipped
+    LaunchedEffect(from) {
         val yAnim = launch {
-            offsetY.animateTo(to[0].toFloat(), animationSpec = tween(500))
+            offsetY.animateTo(to.first.toFloat(), animationSpec = tween(500))
         }
         val xAnim = launch {
-            offsetX.animateTo(to[1].toFloat(), animationSpec = tween(500))
+            offsetX.animateTo(to.second.toFloat(), animationSpec = tween(500))
         }
         joinAll(yAnim, xAnim)
         animationEnd()
     }
 
+    // Draw a box with a Piece inside it
     Box(
         modifier = Modifier
             .offset {
@@ -332,6 +349,116 @@ fun AnimatedChessPiece(
         Piece(pieceModel = piece)
     }
 }
+
+// TODO [UI]: If a Piece is being captured, add animation to it
+//  [BUG]: Secondary animation not occurring
+/*@Composable
+fun AnimateGame(
+    piece: Piece,
+    squareSizePx: IntSize,
+    from: Pair<Int, Int>,
+    to: Pair<Int, Int>,
+    animationEnd: () -> Unit,
+    capturedPiece : Piece?) {
+    val offsetY = remember(from) { Animatable(from.first.toFloat()) }
+    val offsetX = remember(from) { Animatable(from.second.toFloat()) }
+    val rotation = remember(0f) { Animatable(0f) }
+
+    val squareSizeDp = with(LocalDensity.current) {
+        DpSize(
+            width = squareSizePx.width.toDp(),
+            height = squareSizePx.height.toDp()
+        )
+    }
+
+    LaunchedEffect(from) {
+        val yAnim = launch {
+            offsetY.animateTo(to.first.toFloat(), animationSpec = tween(500))
+        }
+        val xAnim = launch {
+            offsetX.animateTo(to.second.toFloat(), animationSpec = tween(500))
+        }
+        val rotationAnim = launch {
+            rotation.animateTo(180f, animationSpec = tween(450))
+        }
+        joinAll(yAnim, xAnim, rotationAnim)
+        animationEnd()
+    }
+
+    // Draw a box with a Piece inside it
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (offsetX.value * squareSizePx.width).roundToInt(),
+                    (offsetY.value * squareSizePx.height).roundToInt()
+                )
+            }
+            .size(squareSizeDp)
+            .zIndex(1f)
+            .border(width = 1.dp, color = Color.Red)
+    ) {
+        Piece(pieceModel = piece)
+    }
+
+    // If there is a Piece being captured,
+    if(capturedPiece != null) {
+        println("Piece has been captured!")
+        Box(
+            modifier = Modifier
+                .offset {
+                    IntOffset(
+                        (to.second * squareSizePx.width),
+                        (to.first * squareSizePx.height)
+                    )
+                }
+                .size(squareSizeDp)
+                .zIndex(1f)
+                .background(Color.Blue)
+                .border(width = 10.dp, color = Color.Magenta)
+        ) {
+            RotatingPiece(piece.asset, rotation.value)
+        }
+
+    }
+}
+
+@Composable
+fun CapturedChessPiece(
+    piece: Piece,
+    squareSizePx: IntSize,
+    position : Pair<Int, Int>) {
+    val rotation = remember(0f) { Animatable(0f) }
+
+    val squareSizeDp = with(LocalDensity.current) {
+        DpSize(
+            width = squareSizePx.width.toDp(),
+            height = squareSizePx.height.toDp()
+        )
+    }
+
+    LaunchedEffect(rotation) {
+        val rotationAnim = launch {
+            rotation.animateTo(180f, animationSpec = tween(450))
+        }
+        joinAll(rotationAnim)
+    }
+
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (position.second * squareSizePx.width),
+                    (position.first * squareSizePx.height)
+                )
+            }
+            .size(squareSizeDp)
+            .zIndex(1f)
+            .background(Color.Blue)
+    ) {
+        RotatingPiece(piece.asset, rotation.value)
+    }
+}*/
 
 // Creates a popup window with the specified dismiss action, content, Card height, Card corner roundness, and content padding values
 @Composable
