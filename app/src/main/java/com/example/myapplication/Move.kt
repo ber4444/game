@@ -58,27 +58,6 @@ fun pickMoveCPU(
     return allPossibleMoves.random()
 }
 
-// TODO [LOGIC]: Use different functions to do board status check and movement
-//  (hasTakenTurn = !Winner && pickedMove != null && pickedMove != InvalidMove)
-//  when hasTakenTurn, swap current team and do next board status check and movement calls
-// Allow the user to pick a move
-fun pickMoveUser(
-    enemyPositions: List<Pair<Int, Int>>,
-    enemyPieces: List<Piece>,
-    allyPositions: List<Pair<Int, Int>>,
-    allyPieces: List<Piece>
-): Pair<Pair<Int, Int>, Int> {
-    // TEMP: Returns a randomly picked move
-    return pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
-
-    val pickedMove : Pair<Pair<Int, Int>, Int> = Pair(INVALID_POSITION, -1)
-
-    // TODO [UI - LOGIC]: Show user the possible moves for Pieces they click/tap on
-    //  tracking: currentPiece, piecePossibleMoves, hasTakenTurn. Only return pick when hasTakenTurn
-
-    return pickedMove
-}
-
 // Get the possible moves for all ally Pieces
 fun getPossibleMoves(
     enemyPositions: List<Pair<Int, Int>>,
@@ -120,8 +99,23 @@ fun checkCheck(
     // Using getPossibleMoves,
     val enemyMoves = getPossibleMoves(allyPositions, enemyPositions, enemyPieces)
 
+    // Determine if the King can be attacked by any possible Enemy move
+    val checkMoveIndex = enemyMoves.map { it.first }.indexOf(kingPosition)
+
+    // DEBUG: Show which Piece poses a threat]
+    if(checkMoveIndex != -1) {
+        val attackerIndex = enemyMoves[checkMoveIndex].second
+        println("King at ${kingPosition} is at risk of attack from ${enemyPieces[attackerIndex].name} at ${enemyPositions[attackerIndex]}!")
+    }
+
+    // If an enemy can reach the King, they are in Check
+    return checkMoveIndex != -1
+
+    /*
     // Return if the Piece is at risk by one or more Enemy Pieces
-    return kingPosition in enemyMoves.map { it.first }
+    return kingPosition in enemyMoves.map {
+        it.first
+    }*/
 
     // Logic from previous King.amIDead
     // Ignores Pawns and the opposing King (explicitly checks Enemy Piece type)

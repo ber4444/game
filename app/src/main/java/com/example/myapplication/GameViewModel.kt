@@ -38,6 +38,68 @@ class GameViewModel(
         _viewState.value = viewState.value.copy(buttonLock = true, hideWindow = true)
     }
 
+    // Update the currently selected square on the board
+    fun updateSelected(position: Pair<Int, Int>) {
+        _gameState.value = gameState.value.copy(selectedSquare = position)
+    }
+
+    // TODO [BUG]: inCheck should be checked before user selects a move
+    // Check if the Player is able to play (!gameOver, etc)
+    fun playerMoveCheck() : Boolean {
+        // Check if Player or opponent is in Check
+        // Update the game to show if CPU won or Stalemate
+
+        return true
+    }
+
+    // Move the Piece the player selected
+    fun playerMove(selectedPieceIndex : Int, newPosition: Pair<Int, Int>) {
+        if(gameState.value.turn == Set.WHITE && _gameState.value.winState == WinState.NONE && _gameState.value.piecesWhite.isNotEmpty()) {
+            if(selectedPieceIndex == -1) { throw Exception("Cannot identify selected Piece!") }
+
+            // Check occurs if a King can be attacked by the enemy
+            // Checkmate occurs when there are no possible moves to escape Check
+            //  Would require filtering possibleMoves or rechecking after movement to see if
+            //  the King moved into enemy range or an ally is no longer blocking enemy movement
+
+            // TODO [CLEANUP]: Move to a different function (called before allowing Player to select a move)
+            // If the current player is in Check,
+            if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
+                println("Must escape check!")
+            }
+            // If the opposing player is in Check
+            if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
+                println("The enemy is already in Check, game over! You win!")
+                // Current player wins
+                _gameState.value = _gameState.value.copy(
+                    winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK
+                )
+                return
+            }
+
+            // Otherwise, let the player take their turn,
+            // Update the game state, includes capturing of Pieces
+            _gameState.value = deriveNewGameState(
+                newPosition = newPosition,
+                pieceIndex = selectedPieceIndex,
+                turn = gameState.value.turn,
+                enemyPieces = gameState.value.piecesBlack,
+                enemyPositions = gameState.value.positionsBlack,
+                allyPositions = gameState.value.positionsWhite,
+                allyPieces = _gameState.value.piecesWhite
+            )
+
+            // TODO [BUG]: Animation doesn't play
+            // Update the animation state
+            _animState.value = PieceAnimationState(
+                pieceToAnimate = gameState.value.piecesWhite[selectedPieceIndex],
+                animatePositionStart = gameState.value.positionsWhite[selectedPieceIndex],
+                animatePositionEnd = newPosition
+            )
+        }
+    }
+
+    // Autoplay
     // Allows the user to take their turn in the chess game
     fun startUserTurn() {
         gameMoves?.cancel()
@@ -46,12 +108,11 @@ class GameViewModel(
         gameMoves = viewModelScope.launch {
             delay(500) // Delay for? Matches AnimatedChessPiece's tween(500)
             // Uses randomMove for testing purposes, in a real game this would be user input
-            move {
+            moveCPU {
                 enemyPositions: List<Pair<Int, Int>>,
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
-
                 pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces) // DEBUG: CPU vs CPU movement
                 //pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
@@ -66,23 +127,13 @@ class GameViewModel(
             pieceToAnimate = null
         )
 
-        // Swap to next team
-        _gameState.value = _gameState.value.copy(
-            // Set to the next team's turn
-            turn = when(_gameState.value.turn) {
-                Set.WHITE -> Set.BLACK
-                Set.BLACK -> Set.WHITE
-            }
-        )
-
         // If it is Black's turn, move a Black Piece
         if (_gameState.value.turn == Set.BLACK) {
-            move {
+            moveCPU {
                 enemyPositions: List<Pair<Int, Int>>,
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
-
                 pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
         } else {
@@ -117,14 +168,14 @@ class GameViewModel(
 
     // Move a Piece from the given (or current) Set with the given move selecting algorithm
     @VisibleForTesting
-    fun move(turn : Set = _gameState.value.turn,
+    fun moveCPU(turn : Set = _gameState.value.turn,
         pickMove : (enemyPositions : List<Pair<Int, Int>>,
             enemyPieces : List<Piece>,
             allyPositions : List<Pair<Int, Int>>,
             allyPieces : List<Piece>) -> Pair<Pair<Int, Int>, Int>)
     {
         // Lock the UI buttons while an automatic turn is being taken
-        _gameState.value = _gameState.value.copy(turn = turn)
+        _gameState.value = _gameState.value.copy(turn = turn, selectedSquare = INVALID_POSITION)
         _viewState.value = _viewState.value.copy(moveButtonLock = true)
 
         // Depending on whose turn it is, different Ally and Enemy values are used
@@ -157,16 +208,15 @@ class GameViewModel(
         //  Would require filtering possibleMoves or rechecking after movement to see if
         //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-        // TODO [LOGIC]: If currently in Check, pickMove should return a move that escapes Check
-        //  Otherwise the current team is in Checkmate and the other team wins
-        // TEMP: Game over if in Check
-        // GOAL: Allow current team a chance to escape Check
-        val allyKingIndex = allyPieces.indexOfFirst { it::class == King::class }
-        var allyKingInCheck = checkCheck(allyPositions[allyKingIndex], enemyPositions, enemyPieces, allyPositions)
-        if(allyKingInCheck) {
-            // Current player loses
+        // If the current team is in Check,
+        if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
+            println("Must escape check!")
+        }
+        // If the opposite team is in Check,
+        if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
+            // Current team wins
             _gameState.value = _gameState.value.copy(
-                winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
+                winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK)
             return
         }
 
@@ -174,6 +224,16 @@ class GameViewModel(
         val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
         val newPosition = positionIndexPair.first
 
+        // TODO [LOGIC ERROR]: Can put self in Check
+        // If the current team is in Check,
+        if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
+            // Current team loses
+            _gameState.value = _gameState.value.copy(
+                winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
+            return
+        }
+
+        // TODO [LOGIC]: Logic not implemented
         // A Stalemate happens when neither player is in Check,
         //  but all possible moves for the current player will put them in Check
         // if(!inCheck && (possibleMove.filter { it.(doesn't put self in Check) } ).isEmpty())
@@ -184,9 +244,6 @@ class GameViewModel(
             return
         }
 
-        // DEBUG: Print move information
-        println("Moving $turn ${allyPieces[positionIndexPair.second].name} from ${allyPositions[positionIndexPair.second]} to $newPosition")
-
         // Update the game state, includes capturing of Pieces
         _gameState.value = deriveNewGameState(
             newPosition = newPosition,
@@ -194,42 +251,13 @@ class GameViewModel(
             turn = _gameState.value.turn,
             enemyPieces =  enemyPieces,
             enemyPositions = enemyPositions,
-            allyPositions = allyPositions
+            allyPositions = allyPositions,
+            allyPieces = allyPieces
         )
 
-        // TODO [BUG]: Check sometimes not caught until move() is called again
-
-        // Check if the enemy King was put in Check
-        val enemyKingIndex = enemyPieces.indexOfFirst { it::class == King::class }
-        val enemyKingInCheck = checkCheck(enemyPositions[enemyKingIndex], allyPositions, allyPieces, enemyPositions)
-        if (enemyKingInCheck) {
-            // Current player wins
-            _gameState.value = _gameState.value.copy(
-                winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK)
-            return
-        }
-
-        // Check if the ally King was put in Check
-        // TODO [LOGIC ERROR]: Shouldn't be able to put yourself in Check
-        // TEMP: After moving, check if you put your own King in Check
-        // GOAL: Identify and filter moves from possible moves within pickMove()
-        allyKingInCheck = checkCheck(allyPositions[allyKingIndex], enemyPositions, enemyPieces, allyPositions)
-        if(allyKingInCheck) {
-            // Current player loses
-            _gameState.value = _gameState.value.copy(
-            winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
-            return
-        }
-
-        // If someone won, skip updating of animation state
-        if (_gameState.value.winState != WinState.NONE) {
-            return
-        }
-
-        // If the game is continuing, update the animation state
+        // Update the animation state
         _animState.value = PieceAnimationState(
             pieceToAnimate = allyPieces[positionIndexPair.second],
-            pieceIndex = positionIndexPair.second,
             animatePositionStart = allyPositions[positionIndexPair.second],
             animatePositionEnd = positionIndexPair.first
         )
@@ -242,12 +270,16 @@ class GameViewModel(
         turn : Set,
         enemyPieces : List<Piece>,
         enemyPositions: List<Pair<Int, Int>>,
-        allyPositions : List<Pair<Int, Int>>
+        allyPositions : List<Pair<Int, Int>>,
+        allyPieces: List<Piece>
     ): GameUiState {
         // Will be updating the Enemy's Pieces (if capturing) and the position of the given Ally Piece
         var mutableEnemyPieces = enemyPieces.toMutableList()
         var mutableEnemyPositions = enemyPositions.toMutableList()
         var mutableAllyPositions = allyPositions.toMutableList()
+
+        // DEBUG: Print move information
+        println("Moving $turn ${allyPieces[pieceIndex].name} from ${allyPositions[pieceIndex]} to $newPosition")
 
         // if piece is on top of the other color's piece (capturing),
         // remove the other color's piece and its corresponding position
@@ -264,19 +296,45 @@ class GameViewModel(
 
         // Update Pieces and their positions (only the enemy team could have lost a Piece)
         mutableAllyPositions[pieceIndex] = newPosition
+
+        // Update the inCheck status of both teams
+        // Is the ally team inCheck?
+        val allyKingIndex = allyPieces.indexOfFirst { it::class == King::class }
+        val allyInCheck = checkCheck(mutableAllyPositions[allyKingIndex], mutableEnemyPositions, mutableEnemyPieces, mutableAllyPositions)
+
+        // Is the enemy team inCheck?
+        val enemyKingIndex = mutableEnemyPieces.indexOfFirst { it::class == King::class }
+        val enemyInCheck = checkCheck(mutableEnemyPositions[enemyKingIndex], mutableAllyPositions, allyPieces, mutableEnemyPositions)
+
+        // Next turn will be the opposite Set
+        val nextTurn = when(_gameState.value.turn) {
+            Set.WHITE -> Set.BLACK
+            Set.BLACK -> Set.WHITE
+        }
+
+        // DEBUG: Check which team is inCheck
+        if(allyInCheck) { println("Ally $turn in Check!") }
+        else if(enemyInCheck) { println("Enemy $nextTurn in Check!")}
+
         return when(turn) {
             Set.WHITE -> {
                 _gameState.value.copy(
+                    turn = nextTurn,
                     piecesBlack = mutableEnemyPieces,
                     positionsBlack = mutableEnemyPositions,
-                    positionsWhite = mutableAllyPositions
+                    positionsWhite = mutableAllyPositions,
+                    inCheckWhite = allyInCheck,
+                    inCheckBlack = enemyInCheck
                 )
             }
             Set.BLACK -> {
                 _gameState.value.copy(
+                    turn = nextTurn,
                     piecesWhite = mutableEnemyPieces,
                     positionsWhite = mutableEnemyPositions,
-                    positionsBlack = mutableAllyPositions
+                    positionsBlack = mutableAllyPositions,
+                    inCheckWhite = enemyInCheck,
+                    inCheckBlack = allyInCheck
                 )
             }
         }

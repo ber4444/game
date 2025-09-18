@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -50,7 +52,10 @@ import kotlin.math.roundToInt
 import androidx.compose.material3.Card
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 
 @Composable
@@ -131,12 +136,14 @@ fun GameScreen(
             }
         }
 
-        // Display the Chess Board
-        Board(gameState, animState, windowSize) { viewModel.animationEnd() }
+        // Display the Chess Board based on the current viewModel
+        Board(gameState, animState, windowSize,
+            { selectedPosition -> viewModel.updateSelected(selectedPosition) },
+            { pieceIndex: Int, newPosition: Pair<Int, Int> ->  viewModel.playerMove(pieceIndex, newPosition) },
+            { viewModel.animationEnd() })
 
         // Display a spacer
         Spacer(modifier = Modifier.padding(8.dp))
-
 
         // Display the AutoPlay mode toggle
         Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
@@ -190,15 +197,80 @@ fun GameScreen(
     }
 }
 
+// Identify what is going on in a displayed Square on the Board
+enum class SquareType {
+    Empty,  // No Pieces
+
+    WhitePiece, // A White Piece is in the Square
+    BlackPiece, // A Black Piece is in the Square
+
+    // Selected Ally Piece
+    CanMove,    // The selected Piece can make a valid move
+    CannotMove, // The selected Piece cannot make a valid move
+
+    // Possible moves
+    PossibleMove,   // This is a possible move for the selected Piece
+    PossibleCapture // This is a possible move which will capture an enemy Piece
+}
+
+// A Square on the Chess Board
 @Composable
-fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean, content: @Composable ()-> Unit) {
+fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean,
+    squareType : SquareType = SquareType.Empty, clickable: Boolean = false,
+    onClick : (SquareType) -> Unit = {},
+    content: @Composable ()-> Unit) {
+    val borderWidth : Dp
+    val borderColor : Color
+    val shapeType : Shape
+
+    // Different display based on SquareType
+    when(squareType) {
+        // Green to show the Piece can move
+        SquareType.CanMove -> {
+            borderWidth = 1.dp
+            borderColor = Color.Green
+            shapeType = RectangleShape
+        }
+
+        // Red to show the Piece cannot move
+        SquareType.CannotMove -> {
+            borderWidth = 1.dp
+            borderColor = Color.Red
+            shapeType = RectangleShape
+        }
+
+        // A possible move (doesn't capture an enemy)
+        SquareType.PossibleMove -> {
+            borderWidth = 5.dp
+            borderColor = Color.Yellow
+            shapeType = CircleShape
+        }
+
+        // A possible move that does capture an enemy
+        SquareType.PossibleCapture -> {
+            borderWidth = 5.dp
+            borderColor = Color.Red
+            shapeType = CircleShape
+        }
+
+        // Other Squares are not highlighted
+        else -> {
+            borderWidth = 0.dp
+            borderColor = Color.Transparent
+            shapeType = RectangleShape
+        }
+    }
+
+    // Create a Box to hold the given content
     Box(modifier = modifier
         .weight(1f)
         .aspectRatio(1f)
         .background(
             color = if (isDarkSquare) MaterialTheme.colorScheme.secondary
             else Color.White
-        ),
+        )
+        .border(borderWidth, borderColor, shapeType)
+        .clickable(clickable, onClickLabel = null, role = null, onClick = { onClick(squareType) }),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -207,12 +279,37 @@ fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean, content: @Composa
 
 @Composable
 fun Board(
-    state: GameUiState,
+    gameState: GameUiState,
     animState: PieceAnimationState,
     windowSize: WindowWidthSizeClass,
+    updateSelected: (Pair<Int, Int>) -> Unit,
+    playerMove: (Int, Pair<Int, Int>) -> Unit,
     animationEnd: () -> Unit
 ) {
+    // TODO [EFFICIENCY]: Calculate before draw?
     val squareSizePx = remember { mutableStateOf(IntSize.Zero) }
+    val squareAvgSizePx = remember { mutableStateOf(IntSize.Zero) }
+
+    // The possible moves of the selected square
+    val selectedPossibleMoves = remember { mutableStateOf(emptyList<Pair<Int,Int>>()) }
+
+    // If not in autoplay and not in an invalid position,
+    if(!gameState.autoPlay) {
+        if(gameState.selectedSquare != INVALID_POSITION) {
+            // If the user has selected one of their Pieces,
+            val pieceIndex = gameState.positionsWhite.indexOf(gameState.selectedSquare)
+            if(pieceIndex != -1) {
+                // Get the possible moves for the current position
+                selectedPossibleMoves.value =
+                    gameState.piecesWhite[pieceIndex].getValidMovesPositions(
+                        gameState.selectedSquare,
+                        gameState.positionsBlack,
+                        gameState.positionsWhite
+                    )
+            }
+        }
+    }
+    else if(selectedPossibleMoves.value.isNotEmpty()) { selectedPossibleMoves.value = emptyList() }
 
     Box(
         modifier = Modifier
@@ -233,38 +330,87 @@ fun Board(
                 ) {
                     // Each Row has 8 Squares
                     repeat(8) { column ->
+                        // The position of the current Square
                         val currentSquare = Pair(row, column)
+
+                        // Type of Square to draw based on Piece type and possible moves
+                        val squareType : SquareType =
+                            if(currentSquare == gameState.selectedSquare) {
+                                if(selectedPossibleMoves.value.isEmpty()) {
+                                    SquareType.CannotMove
+                                } else {
+                                    SquareType.CanMove
+                                }
+                            }
+                            else {
+                                    if(currentSquare in selectedPossibleMoves.value) {
+                                        if(currentSquare in gameState.positionsBlack) {
+                                            SquareType.PossibleCapture
+                                        } else {
+                                            SquareType.PossibleMove
+                                        }
+                                    } else if(currentSquare in gameState.positionsWhite) {
+                                        SquareType.WhitePiece
+                                    } else if(currentSquare in gameState.positionsBlack) {
+                                        SquareType.BlackPiece
+                                    }
+                                    else {
+                                        SquareType.Empty
+                                    }
+                            }
+
+                        // Can only click on White Pieces or possible moves
+                        val clickable : Boolean = squareType == SquareType.PossibleMove ||  squareType == SquareType.PossibleCapture || squareType ==  SquareType.WhitePiece
+
                         Square(
                             modifier = Modifier.onGloballyPositioned {
                                 // If this position is where an animation will start,
                                 if (animState.animatePositionStart == currentSquare) {
-
                                     // Save the size of the red bounding square for the moving animation
                                     squareSizePx.value = it.size
                                 }
+                                if(squareAvgSizePx.value == IntSize.Zero) {
+                                    squareAvgSizePx.value = it.size // Needs to be calculated once
+                                }
                             },
-                            (row + column) % 2 == 1) {
-                            // Do not draw Pieces that are being animated
-                            if(animState.pieceToAnimate != null &&
+                            (row + column) % 2 == 1, squareType, !gameState.autoPlay && clickable,
+                            { squareType ->
+                                when (squareType) {
+                                    SquareType.PossibleMove, SquareType.PossibleCapture -> {
+                                        val moveIndex = gameState.selectedSquare
+
+                                        // reset selection
+                                        updateSelected(INVALID_POSITION)
+                                        selectedPossibleMoves.value = emptyList()
+
+                                        // Move based on the Player's input
+                                        playerMove(
+                                            gameState.positionsWhite.indexOf(moveIndex),
+                                            currentSquare
+                                        )
+
+                                    } // Have Player take move
+                                    SquareType.WhitePiece -> if(gameState.turn == Set.WHITE) updateSelected(
+                                        currentSquare
+                                    ) // Update selectedPiece
+                                    else -> {
+                                        throw Exception("Should not be clickable")
+                                    } // Do nothing when selected
+                                }
+                            }) {
+                            // Only draw Pieces that are not being animated
+                            if(!(animState.pieceToAnimate != null &&
                                 ((animState.animatePositionStart == currentSquare) ||
-                                        (animState.animatePositionEnd == currentSquare))) {
-                            }
-                            else {
-                                // display a piece on the board if it exists at the given row and column
-                                // pair each white piece with its position
-                                // find the first pair where the position matches the current row and column
-                                // extract the piece from the pair if it exists
-                                val pieceWhite = state.piecesWhite.zip(state.positionsWhite)
-                                    .firstOrNull { it.second == Pair(row, column) }
-                                    ?.first
+                                (animState.animatePositionEnd == currentSquare)))) {
+                                // Draw White Pieces
+                                if(squareType == SquareType.WhitePiece || squareType == SquareType.CannotMove || squareType == SquareType.CanMove) {
+                                    Piece(pieceModel = gameState.piecesWhite[gameState.positionsWhite.indexOf(currentSquare)])
+                                }
 
-                                val pieceBlack = state.piecesBlack.zip(state.positionsBlack)
-                                    .firstOrNull { it.second == Pair(row, column) }
-                                    ?.first
-
-                                // Draw the icon of a White or Black Piece
-                                pieceWhite?.let { Piece(pieceModel = it) } ?:
-                                pieceBlack?.let { Piece(pieceModel = it) }
+                                // Draw Black Pieces
+                                if(squareType == SquareType.BlackPiece || squareType == SquareType.PossibleCapture) {
+                                    Piece(pieceModel = gameState.piecesBlack[gameState.positionsBlack.indexOf(currentSquare)])
+                                }
                             }
                         }
                     }
@@ -299,16 +445,6 @@ fun Piece(pieceModel: Piece) {
         painter = painterResource(id = pieceModel.asset),
         tint = Color.Unspecified,
         contentDescription = pieceModel.asset.toString()
-    )
-}
-
-@Composable
-fun RotatingPiece(pieceIcon : Int, rotation: Float) {
-    Icon(
-        painter = painterResource(id = pieceIcon),
-        tint = Color.Unspecified,
-        contentDescription = pieceIcon.toString(),
-        modifier = Modifier.graphicsLayer { rotationZ = rotation}
     )
 }
 

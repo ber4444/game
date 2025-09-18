@@ -8,7 +8,7 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceWhite within bounds and no overlap`() {
-        viewModel.move(Set.WHITE)  {
+        viewModel.moveCPU(Set.WHITE)  {
             enemyPositions: List<Pair<Int, Int>>,
             enemyPieces: List<Piece>,
             allyPositions: List<Pair<Int,Int>>,
@@ -24,7 +24,7 @@ class GameViewModelTest {
 
     @Test
     fun `test movePieceBlack within bounds and no overlap`() {
-        viewModel.move(Set.BLACK) {
+        viewModel.moveCPU(Set.BLACK) {
             enemyPositions: List<Pair<Int, Int>>,
             enemyPieces: List<Piece>,
             allyPositions: List<Pair<Int, Int>>,
@@ -41,14 +41,14 @@ class GameViewModelTest {
     @Test
     fun `play until game over and ensure no overlap`() {
         while(viewModel.gameState.value.winState == WinState.NONE) {
-            viewModel.move(Set.WHITE) {
+            viewModel.moveCPU(Set.WHITE) {
                 enemyPositions: List<Pair<Int, Int>>,
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
                 pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
-            viewModel.move(Set.BLACK) {
+            viewModel.moveCPU(Set.BLACK) {
                 enemyPositions: List<Pair<Int, Int>>,
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,

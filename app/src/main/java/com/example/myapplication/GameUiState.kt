@@ -15,6 +15,7 @@ data class GameUiState(
         King(Set.WHITE), Bishop(Set.WHITE), Knight(Set.WHITE), Rook(Set.WHITE))
             + List(8) { Pawn(Set.WHITE) },
     val positionsWhite: List<Pair<Int, Int>> = List(8) { Pair(7, it) } + List(8) { Pair(6, it) },
+    val inCheckWhite : Boolean = false,
 
     // Black team's Pieces and their positions
     val piecesBlack: List<Piece> = listOf(
@@ -22,9 +23,12 @@ data class GameUiState(
         King(Set.BLACK), Bishop(Set.BLACK), Knight(Set.BLACK), Rook(Set.BLACK))
             + List(8) { Pawn(Set.BLACK) },
     val positionsBlack: List<Pair<Int, Int>> = List(8) { Pair(0, it) } + List(8) { Pair(1, it) },
+    val inCheckBlack : Boolean = false,
 
     val winState: WinState = WinState.NONE, // The current WinState of the game
     val autoPlay : Boolean = false,         // If the game is in autoplay mode
+
+    val selectedSquare : Pair<Int, Int> = INVALID_POSITION, // The Position on the board that the user has selected
 )
 
 // Current win state of the game

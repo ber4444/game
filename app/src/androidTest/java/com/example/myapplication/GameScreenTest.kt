@@ -59,8 +59,6 @@ class GameScreenTest {
         composeTestRule.onNodeWithText(winnerText).assertIsDisplayed()
     }
 
-    // TODO [TEST]: Throws error since no Black Pieces are on the board
-    //  Stalemate - all possibleMoves lead to Check (can't move to put yourself in Check)
     @Test
     fun testStalemate() {
         // we're just going to fill the board to force a no move scenario
