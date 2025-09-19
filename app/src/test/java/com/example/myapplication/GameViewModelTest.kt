@@ -18,7 +18,7 @@ class GameViewModelTest {
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
-        assertTrue("White piece out of bounds", positionWhite.first in 0..7 && positionWhite.second in 0..7)
+        assertTrue("White piece out of bounds", positionWhite.first in 0 until BOARD_SIZE && positionWhite.second in 0 until BOARD_SIZE)
         assertTrue("Pieces overlap", positionWhite != positionBlack)
     }
 
@@ -34,7 +34,7 @@ class GameViewModelTest {
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
 
-        assertTrue("Black piece out of bounds", positionBlack.first in 0..7 && positionBlack.second in 0..7)
+        assertTrue("Black piece out of bounds", positionBlack.first in 0 until BOARD_SIZE && positionBlack.second in 0 until BOARD_SIZE)
         assertTrue("Pieces overlap", positionBlack != positionWhite)
     }
 
@@ -59,8 +59,8 @@ class GameViewModelTest {
             val positionWhite = viewModel.gameState.value.positionsWhite.first()
             val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
-            assertTrue("White piece out of bounds", positionWhite.first in 0..7 && positionWhite.second in 0..7)
-            assertTrue("Black piece out of bounds", positionBlack.first in 0..7 && positionBlack.second in 0..7)
+            assertTrue("White piece out of bounds", positionWhite.first in 0 until BOARD_SIZE && positionWhite.second in 0 until BOARD_SIZE)
+            assertTrue("Black piece out of bounds", positionBlack.first in 0 until BOARD_SIZE && positionBlack.second in 0 until BOARD_SIZE)
             assertTrue("Pieces overlap", positionWhite != positionBlack)
         }
     }
@@ -101,7 +101,7 @@ class GameViewModelTest {
 
     @Test
     fun `the King is not safe from Knights`() {
-        val kingPositionPair = Pair(3,3)
+        val kingPosition = Pair(3,3)
         val knightPositions = listOf(
             Pair(1,2),Pair(1,4),Pair(2,1),Pair(2,5),
             Pair(4,1),Pair(4,5),Pair(5,2),Pair(5,4)
@@ -125,7 +125,7 @@ class GameViewModelTest {
         assertTrue(
             "Knights should be able to capture King even when allies are in between",
             checkCheck(
-                kingPosition = kingPositionPair,
+                kingPosition = kingPosition,
                 enemyPositions = killingGameState.positionsBlack,
                 enemyPieces = killingGameState.piecesBlack,
                 allyPositions = killingGameState.positionsWhite
