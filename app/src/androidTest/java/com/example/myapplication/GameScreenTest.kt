@@ -38,8 +38,7 @@ class GameScreenTest {
     @Test
     fun testGameOver() {
         val testGameState = GameUiState(
-            gameEnded = true,
-            winner = WinState.WHITE
+            winState = WinState.WHITE
         )
 
         composeTestRule.setContent {
@@ -54,8 +53,8 @@ class GameScreenTest {
         }
 
         val winnerText = getInstrumentation().targetContext.getString(
-            R.string.game_end_message,
-            testGameState.winner
+            R.string.game_end_message_winner,
+            testGameState.winState
         )
         composeTestRule.onNodeWithText(winnerText).assertIsDisplayed()
     }
@@ -64,10 +63,10 @@ class GameScreenTest {
     fun testStalemate() {
         // we're just going to fill the board to force a no move scenario
         val sixtyFourWhitePieces = List(64) { King(Set.WHITE) }
-        val positions = mutableListOf<List<Int>>()
-        for (i in 0..7) {
-            for (j in 0..7) {
-                positions.add(listOf(i,j))
+        val positions = mutableListOf<Pair<Int, Int>>()
+        for (i in 0 until BOARD_SIZE) {
+            for (j in 0 until BOARD_SIZE) {
+                positions.add(Pair(i,j))
             }
         }
 
@@ -92,7 +91,7 @@ class GameScreenTest {
         composeTestRule.onNodeWithText("Move").performClick()
 
         val winnerText = getInstrumentation().targetContext.getString(
-            R.string.game_end_message,
+            R.string.game_end_message_no_winner,
             WinState.STALEMATE
         )
 
@@ -116,5 +115,4 @@ class GameScreenTest {
 
         composeTestRule.onNodeWithText(winnerText).assertIsDisplayed()
     }
-
 }

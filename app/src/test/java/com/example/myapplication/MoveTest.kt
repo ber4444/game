@@ -16,21 +16,19 @@ class MoveTest {
     @Test
     fun `randomMove returns a move even if the first piece has none`() {
         val whitePieces = listOf(King(Set.WHITE), Rook(Set.WHITE), Rook(Set.WHITE), Rook(Set.WHITE))
-        val whitePositions = listOf(listOf(0,0), listOf(0,1), listOf(1,0), listOf(1,1))
+        val whitePositions = listOf(Pair(0,0), Pair(0,1), Pair(1,0), Pair(1,1))
         val blackPieces = listOf(King(Set.BLACK))
-        val blackPositions = listOf(listOf(7,7))
+        val blackPositions = listOf(Pair(7,7))
 
-        val randomPosition = randomMove(
-            turn = Set.WHITE,
+        val randomPosition = pickMoveRandom(
             enemyPositions = blackPositions,
             enemyPieces = blackPieces,
             allyPositions = whitePositions,
-            allyPieces = whitePieces,
-            shuffledAllyIndexes = whitePieces.indices.toList()
+            allyPieces = whitePieces
         )
 
-        val x = abs(randomPosition.first[0] - whitePositions[0][0])
-        val y = abs(randomPosition.first[1] - whitePositions[0][1])
+        val x = abs(randomPosition.first.first - whitePositions[0].first)
+        val y = abs(randomPosition.first.second - whitePositions[0].second)
 
         val kingDidNotMove = when {
             x == 0 && y == 1 ||
