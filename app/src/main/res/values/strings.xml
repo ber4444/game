@@ -1,5 +1,11 @@
 <resources>
     <string name="app_name">Chess</string>
     <string name="move_button">Move</string>
-    <string name="game_end_message">Game ended! %1$s wins!</string>
+    <string name="reset_button">Reset</string>
+    <string name="play_again_button">Play Again!</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="end_button">End</string>
+    <string name="autoplay_button">Autoplay</string>
+    <string name="game_end_message_winner">Game ended! %1$s wins!</string>
+    <string name="game_end_message_no_winner">Game ended in a %1$s!</string>
 </resources>
