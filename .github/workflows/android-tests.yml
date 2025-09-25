@@ -64,7 +64,7 @@ jobs:
           script: ./gradlew connectedDebugAndroidTest
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: test-results-api-${{ matrix.api-level }}-device-${{ matrix.profile || matrix.avd-name || matrix.target }}
           path: app/build/reports/androidTests/connected/debug/index.html
