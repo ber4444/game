@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - api-level: 30
-            profile: "Nexus 6"
+            profile: "Pixel 9"
             target: default
 
     steps:
