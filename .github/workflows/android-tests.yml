@@ -45,7 +45,7 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
           profile: ${{ matrix.profile }}
-          arch: x86_64
+          arch: aarch64
           script: ./gradlew connectedDebugAndroidTest
 
       - name: Upload test results
