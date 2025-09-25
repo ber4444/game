@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - api-level: 30
+          - api-level: 35
             profile: "Pixel 9"
             target: default
 
