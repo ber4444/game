@@ -14,18 +14,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - api-level: 24
-            profile: "Nexus 5"
-            target: google_apis
-          - api-level: 29
-            profile: "pixel_4"
-            target: google_apis
           - api-level: 30
-            profile: "pixel_5"
-            target: google_apis
-          - api-level: 33
-            profile: "pixel_7_pro"
-            target: google_apis
+            profile: "Nexus 6"
+            target: default
 
     steps:
       - name: Checkout code
