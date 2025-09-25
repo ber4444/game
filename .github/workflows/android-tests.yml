@@ -8,7 +8,7 @@ on:
 
 jobs:
   instrumented-tests:
-    name: Instrumented Tests (API ${{ matrix.api-level }}, Device ${{ matrix.profile || matrix.target }})
+    name: Instrumented Tests (API ${{ matrix.api-level }}, Device ${{ matrix.profile }} / ${{ matrix.target }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -18,13 +18,13 @@ jobs:
             profile: "Nexus 5"
             target: google_apis
           - api-level: 29
-            profile: "Pixel 4"
+            profile: "pixel_4"
             target: google_apis
           - api-level: 30
-            profile: "Pixel 5"
+            profile: "pixel_5"
             target: google_apis
           - api-level: 33
-            profile: "Pixel 7 Pro"
+            profile: "pixel_7_pro"
             target: google_apis
 
     steps:
@@ -43,7 +43,7 @@ jobs:
       - name: Show testing environment
         run: |
           echo "Running on API level: ${{ matrix.api-level }}"
-          echo "Running on device: ${{ matrix.profile || matrix.target }}"
+          echo "Running on device: ${{ matrix.profile }}"
 
       - name: Build debug APK and test APK
         run: ./gradlew assembleDebug assembleAndroidTest
@@ -60,5 +60,5 @@ jobs:
       - name: Upload test results
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: test-results-api-${{ matrix.api-level }}-device-${{ matrix.profile || matrix.target }}
+          name: test-results-api-${{ matrix.api-level }}-device-${{ matrix.name }}
           path: app/build/reports/androidTests/connected/debug/index.html
