@@ -55,6 +55,7 @@ jobs:
           target: ${{ matrix.target }}
           profile: ${{ matrix.profile }}
           avd-name: ${{ matrix.avd-name }}
+          arch: x86_64
           script: ./gradlew connectedDebugAndroidTest
 
       - name: Upload test results
