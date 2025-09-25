@@ -26,12 +26,6 @@ jobs:
           - api-level: 33
             profile: "Pixel 7 Pro"
             target: google_apis
-          - api-level: 34
-            profile: "Pixel 8 Pro"
-            target: google_apis
-          - api-level: 36
-            profile: "Pixel 9 Pro"
-            target: google_apis
 
     steps:
       - name: Checkout code
