@@ -46,6 +46,9 @@ jobs:
           target: ${{ matrix.target }}
           profile: ${{ matrix.profile }}
           script: ./gradlew connectedDebugAndroidTest
+          emulator-options: -no-metrics -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          arch: x86_64
 
       - name: Upload test results
         uses: actions/upload-artifact@v4.6.2
