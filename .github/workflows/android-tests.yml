@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - api-level: 35
-            profile: pixel_9_pro
+            profile: pixel_7
             target: default
 
     steps:
