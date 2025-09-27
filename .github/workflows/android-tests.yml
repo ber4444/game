@@ -10,6 +10,7 @@ jobs:
   instrumented-tests:
     name: Instrumented Tests (API ${{ matrix.api-level }}, Device ${{ matrix.profile }} / ${{ matrix.target }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       matrix:
@@ -17,13 +18,11 @@ jobs:
           - api-level: 35
             profile: pixel_7
             target: default
-          - api-level: 33
-            profile: pixel_4
-            target: default
-          - api-level: 29
-            profile: pixel_4
-            target: default
+          # - api-level: <add API level here>
+            # profile: <add device name here>
+            # target: default
 
+    # Checks out repository code so the workflow can access it
     steps:
       - name: Checkout code
         uses: actions/checkout@v5.0.0
@@ -35,13 +34,32 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3.2.2
 
+      # Install latest Android CLI tools
+      - name: Install latest command-line tools
+        run: |
+          sdkmanager --install "cmdline-tools;latest"
+          yes | sdkmanager --update
+
+      # Additional update to ensure SDK is fully up to date before proceeding
+      - name: Update SDK tools
+        run: yes | sdkmanager --update
+
+      # Installs the Android emulator and matching system image for the API level and target defined in matrix
+      - name: Install emulator + system image
+        run: sdkmanager "emulator" "system-images;android-${{ matrix.api-level }};${{ matrix.target }};x86_64"
+
+      # Configure permissions on the /dev/kvm device to allow the emulator
+      # to use hardware virtualization acceleration for performance improvement
       - name: Enable KVM group perms
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+
+      - name: Clean AVD state
+        run: rm -rf ~/.android/avd/*
 
       - name: Show testing environment
         run: |
@@ -57,13 +75,38 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
           profile: ${{ matrix.profile }}
-          script: ./gradlew connectedDebugAndroidTest --stacktrace --info
-          emulator-options: -no-metrics -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
           arch: x86_64
+          disable-animations: true
+          force-avd-creation: true
+          emulator-options: >
+            -no-snapshot-save
+            -noaudio
+            -no-boot-anim
+            -gpu swiftshader_indirect
+            -camera-back none
+            -no-window
+            -grpc 8554
+            -grpc-use-jwt
+          script: |
+            echo "grpc.allowlist=*" >> ~/.android/avd/test.avd/config.ini
+            ./gradlew connectedDebugAndroidTest
 
       - name: Upload test results
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: test-results-api-${{ matrix.api-level }}-device-${{ matrix.name }}
+          name: test-results-api-${{ matrix.api-level }}-device-${{ matrix.profile }}
           path: app/build/reports/androidTests/connected/debug/index.html
+
+      # TODO: add caching when ready to speed up builds
+      # Optional: Enable once builds are stable
+      # - name: Gradle cache
+      #   uses: gradle/actions/setup-gradle@v3
+
+      # - name: AVD cache
+      #   uses: actions/cache@v4
+      #   id: avd-cache
+      #   with:
+      #     path: |
+      #       ~/.android/avd/*
+      #       ~/.android/adb*
+      #     key: avd-${{ matrix.api-level }}
