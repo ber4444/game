@@ -62,18 +62,31 @@ class GameViewModel(
             //  Would require filtering possibleMoves or rechecking after movement to see if
             //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-            // TODO [CLEANUP]: Move to a different function (called before allowing Player to select a move)
-            // If the current player is in Check,
-            if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-                println("Must escape check!")
-            }
-            // If the opposing player is in Check
-            if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
-                println("The enemy is already in Check, game over! You win!")
-                // Current player wins
-                _gameState.value = _gameState.value.copy(
-                    winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK
-                )
+//            // TODO [CLEANUP]: Move to a different function (called before allowing Player to select a move)
+//            // If the current player is in Check,
+//            if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
+//                println("Must escape check!")
+//            }
+//            // If the opposing player is in Check
+//            if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
+//                println("The enemy is already in Check, game over! You win!")
+//                // Current player wins
+//                _gameState.value = _gameState.value.copy(
+//                    winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK
+//                )
+//                return
+//            }
+
+            val legalMoves = getLegalMoves(
+                allyPositions = _gameState.value.positionsWhite,
+                allyPieces = _gameState.value.piecesWhite,
+                enemyPositions = _gameState.value.positionsBlack,
+                enemyPieces = _gameState.value.piecesBlack
+            )
+
+            val isLegal = legalMoves.any { it.first == newPosition && it.second == selectedPieceIndex }
+            if (!isLegal) {
+                println("Move not allowed: puts king in check or invalid")
                 return
             }
 
@@ -168,17 +181,20 @@ class GameViewModel(
 
     // Move a Piece from the given (or current) Set with the given move selecting algorithm
     @VisibleForTesting
-    fun moveCPU(turn : Set = _gameState.value.turn,
-        pickMove : (enemyPositions : List<Pair<Int, Int>>,
-            enemyPieces : List<Piece>,
-            allyPositions : List<Pair<Int, Int>>,
-            allyPieces : List<Piece>) -> Pair<Pair<Int, Int>, Int>)
-    {
-        // Lock the UI buttons while an automatic turn is being taken
+    fun moveCPU(
+        turn: Set = _gameState.value.turn,
+        pickMove: (
+            enemyPositions: List<Pair<Int, Int>>,
+            enemyPieces: List<Piece>,
+            allyPositions: List<Pair<Int, Int>>,
+            allyPieces: List<Piece>
+        ) -> Pair<Pair<Int, Int>, Int>
+    ) {
+        // Lock UI
         _gameState.value = _gameState.value.copy(turn = turn, selectedSquare = INVALID_POSITION)
         _viewState.value = _viewState.value.copy(moveButtonLock = true)
 
-        // Depending on whose turn it is, different Ally and Enemy values are used
+        // Split sides
         val allyPositions: List<Pair<Int, Int>>
         val allyPieces: List<Piece>
         val enemyPositions: List<Pair<Int, Int>>
@@ -198,69 +214,138 @@ class GameViewModel(
             }
         }
 
-        // Cannot perform moves when there are no Pieces, return early
-        if(allyPieces.isEmpty() || _gameState.value.winState != WinState.NONE) {
-            return
-        }
-
-        // Check occurs if a King can be attacked by the enemy
-        // Checkmate occurs when there are no possible moves to escape Check
-        //  Would require filtering possibleMoves or rechecking after movement to see if
-        //  the King moved into enemy range or an ally is no longer blocking enemy movement
-
-        // If the current team is in Check,
-        if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-            println("Must escape check!")
-        }
-        // If the opposite team is in Check,
-        if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
-            // Current team wins
+        if (allyPieces.none { it is King }) {
             _gameState.value = _gameState.value.copy(
-                winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK)
-            return
-        }
-
-        // Pick a move using the given pickMove function
-        val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
-        val newPosition = positionIndexPair.first
-
-        // TODO [LOGIC ERROR]: Can put self in Check
-        // If the current team is in Check,
-        if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-            // Current team loses
-            _gameState.value = _gameState.value.copy(
-                winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
-            return
-        }
-
-        // TODO [LOGIC]: Logic not implemented
-        // A Stalemate happens when neither player is in Check,
-        //  but all possible moves for the current player will put them in Check
-        // if(!inCheck && (possibleMove.filter { it.(doesn't put self in Check) } ).isEmpty())
-        if (newPosition == INVALID_POSITION) {
-            _gameState.value = _gameState.value.copy(
-                winState = WinState.STALEMATE
+                winState = if (turn == Set.WHITE) WinState.BLACK else WinState.WHITE
             )
             return
         }
 
-        // Update the game state, includes capturing of Pieces
+        // Skip if game ended or no pieces
+        if (allyPieces.isEmpty() || _gameState.value.winState != WinState.NONE) return
+
+        // Compute legal moves for the current side
+        val legalMoves = getLegalMoves(allyPositions, allyPieces, enemyPositions, enemyPieces)
+        if (legalMoves.isEmpty()) {
+            _gameState.value = _gameState.value.copy(winState = evaluateGameEnd())
+            return
+        }
+
+        // Ask the picker
+        val (newPosition, pieceIndex) = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
+
+        // Absolute safety guard
+        if (pieceIndex !in allyPieces.indices || newPosition == INVALID_POSITION) {
+            // No move chosen → just skip
+            return
+        }
+
+        // Only perform if the (position, index) pair is legal
+        val isLegal = legalMoves.any { it.first == newPosition && it.second == pieceIndex }
+        if (!isLegal) return
+
+        // Apply state
         _gameState.value = deriveNewGameState(
             newPosition = newPosition,
-            pieceIndex = positionIndexPair.second,
-            turn = _gameState.value.turn,
-            enemyPieces =  enemyPieces,
+            pieceIndex = pieceIndex,
+            turn = turn,
+            enemyPieces = enemyPieces,
             enemyPositions = enemyPositions,
             allyPositions = allyPositions,
             allyPieces = allyPieces
         )
 
-        // Update the animation state
+        // Animate safely using the validated index
         _animState.value = PieceAnimationState(
-            pieceToAnimate = allyPieces[positionIndexPair.second],
-            animatePositionStart = allyPositions[positionIndexPair.second],
-            animatePositionEnd = positionIndexPair.first
+            pieceToAnimate = allyPieces[pieceIndex],
+            animatePositionStart = allyPositions[pieceIndex],
+            animatePositionEnd = newPosition
         )
+    }
+
+    fun wouldBeInCheckAfterMove(
+        from: Pair<Int, Int>,
+        to: Pair<Int, Int>,
+        allyPositions: List<Pair<Int, Int>>,
+        allyPieces: List<Piece>,
+        enemyPositions: List<Pair<Int, Int>>,
+        enemyPieces: List<Piece>
+    ): Boolean {
+        val newAllyPositions = allyPositions.toMutableList()
+        val fromIndex = allyPositions.indexOf(from)
+        if (fromIndex == -1) return false // invalid move, ignore
+        newAllyPositions[fromIndex] = to
+
+        val kingIndex = allyPieces.indexOfFirst { it is King }
+        if (kingIndex == -1) {
+            return true
+        }
+
+        val kingPos = newAllyPositions[kingIndex]
+
+        for (i in enemyPieces.indices) {
+            val enemyMoves = enemyPieces[i].getValidMovesPositions(
+                enemyPositions[i],
+                newAllyPositions,
+                enemyPositions
+            )
+            if (kingPos in enemyMoves) return true
+        }
+        return false
+    }
+
+    fun getLegalMoves(
+        allyPositions: List<Pair<Int, Int>>,
+        allyPieces: List<Piece>,
+        enemyPositions: List<Pair<Int, Int>>,
+        enemyPieces: List<Piece>
+    ): List<Pair<Pair<Int, Int>, Int>> {
+
+        val legalMoves = mutableListOf<Pair<Pair<Int, Int>, Int>>()
+
+        for (i in allyPieces.indices) {
+            val piece = allyPieces[i]
+            val from = allyPositions[i]
+
+            val potentialMoves = piece.getValidMovesPositions(
+                position = from,
+                enemyPositions = enemyPositions,
+                allyPositions = allyPositions
+            )
+
+            for (to in potentialMoves) {
+                if (to.first !in 0 until BOARD_SIZE || to.second !in 0 until BOARD_SIZE) continue
+
+                if (allyPositions.contains(to)) continue
+
+                if (!wouldBeInCheckAfterMove(from, to, allyPositions, allyPieces, enemyPositions, enemyPieces)) {
+                    legalMoves.add(Pair(to, i))
+                }
+            }
+        }
+
+        return legalMoves
+    }
+
+    fun evaluateGameEnd(): WinState {
+        val state = _gameState.value
+        val currentTurn = state.turn
+
+        val allyPieces = if (currentTurn == Set.WHITE) state.piecesWhite else state.piecesBlack
+        val allyPositions = if (currentTurn == Set.WHITE) state.positionsWhite else state.positionsBlack
+        val enemyPieces = if (currentTurn == Set.WHITE) state.piecesBlack else state.piecesWhite
+        val enemyPositions = if (currentTurn == Set.WHITE) state.positionsBlack else state.positionsWhite
+
+        val inCheck = if (currentTurn == Set.WHITE) state.inCheckWhite else state.inCheckBlack
+        val legalMoves = getLegalMoves(allyPositions, allyPieces, enemyPositions, enemyPieces)
+
+        return when {
+            legalMoves.isNotEmpty() -> WinState.NONE
+            inCheck -> {
+                if (currentTurn == Set.WHITE) WinState.BLACK else WinState.WHITE
+            }
+            else -> WinState.STALEMATE
+        }
     }
 
     // Given game parameters, returns an updated version of the GameUIState
@@ -297,14 +382,42 @@ class GameViewModel(
         // Update Pieces and their positions (only the enemy team could have lost a Piece)
         mutableAllyPositions[pieceIndex] = newPosition
 
+//        // Update the inCheck status of both teams
+//        // Is the ally team inCheck?
+//        val allyKingIndex = allyPieces.indexOfFirst { it::class == King::class }
+//        val allyInCheck = checkCheck(mutableAllyPositions[allyKingIndex], mutableEnemyPositions, mutableEnemyPieces, mutableAllyPositions)
+//
+//        // Is the enemy team inCheck?
+//        val enemyKingIndex = mutableEnemyPieces.indexOfFirst { it::class == King::class }
+//        val enemyInCheck = checkCheck(mutableEnemyPositions[enemyKingIndex], mutableAllyPositions, allyPieces, mutableEnemyPositions)
+
         // Update the inCheck status of both teams
         // Is the ally team inCheck?
-        val allyKingIndex = allyPieces.indexOfFirst { it::class == King::class }
-        val allyInCheck = checkCheck(mutableAllyPositions[allyKingIndex], mutableEnemyPositions, mutableEnemyPieces, mutableAllyPositions)
+        val allyKingIndex = allyPieces.indexOfFirst { it is King }
+        val allyInCheck = if (allyKingIndex >= 0) {
+            checkCheck(
+                mutableAllyPositions[allyKingIndex],
+                mutableEnemyPositions,
+                mutableEnemyPieces,
+                mutableAllyPositions
+            )
+        } else {
+            // If the King is gone, that side has lost — not "in check"
+            false
+        }
 
         // Is the enemy team inCheck?
-        val enemyKingIndex = mutableEnemyPieces.indexOfFirst { it::class == King::class }
-        val enemyInCheck = checkCheck(mutableEnemyPositions[enemyKingIndex], mutableAllyPositions, allyPieces, mutableEnemyPositions)
+        val enemyKingIndex = mutableEnemyPieces.indexOfFirst { it is King }
+        val enemyInCheck = if (enemyKingIndex >= 0) {
+            checkCheck(
+                mutableEnemyPositions[enemyKingIndex],
+                mutableAllyPositions,
+                allyPieces,
+                mutableEnemyPositions
+            )
+        } else {
+            false
+        }
 
         // Next turn will be the opposite Set
         val nextTurn = when(_gameState.value.turn) {

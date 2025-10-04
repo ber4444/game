@@ -168,4 +168,33 @@ class GameViewModelTest {
             !kingIsDead
         )
     }
+
+    @Test
+    fun `king in check does not immediately end the game`() {
+        val whiteKing = Pair(4, 4)
+        val whiteEscapeSquare = Pair(5, 4)
+        val blackRook = Pair(4, 7)
+
+        val initialState = GameUiState(
+            positionsWhite = listOf(whiteKing, whiteEscapeSquare),
+            positionsBlack = listOf(blackRook),
+            piecesWhite = listOf(King(Set.WHITE), Knight(Set.WHITE)),
+            piecesBlack = listOf(Rook(Set.BLACK)),
+            inCheckWhite = true,
+            inCheckBlack = false,
+            turn = Set.WHITE,
+            winState = WinState.NONE
+        )
+
+        val viewModel = GameViewModel(initialState)
+
+        viewModel.moveCPU(Set.WHITE) { enemyPositions, enemyPieces, allyPositions, allyPieces ->
+            Pair(INVALID_POSITION, 0) // dummy move
+        }
+
+        assertTrue(
+            "Game should NOT be ended just because the King is in check",
+            WinState.NONE == viewModel.gameState.value.winState
+        )
+    }
 }
