@@ -170,31 +170,69 @@ class GameViewModelTest {
     }
 
     @Test
-    fun `king in check does not immediately end the game`() {
-        val whiteKing = Pair(4, 4)
-        val whiteEscapeSquare = Pair(5, 4)
-        val blackRook = Pair(4, 7)
+    fun `black King in check does not immediately end the game after playerMove`() {
+        val blackKingPosition = Pair(0, 4)
+        val whiteRookPosition = Pair(4, 0)
+        val whiteKingPosition = Pair(7, 4)
 
         val initialState = GameUiState(
-            positionsWhite = listOf(whiteKing, whiteEscapeSquare),
-            positionsBlack = listOf(blackRook),
-            piecesWhite = listOf(King(Set.WHITE), Knight(Set.WHITE)),
-            piecesBlack = listOf(Rook(Set.BLACK)),
-            inCheckWhite = true,
-            inCheckBlack = false,
             turn = Set.WHITE,
+            piecesWhite = listOf(Rook(Set.WHITE), King(Set.WHITE)),
+            positionsWhite = listOf(whiteRookPosition, whiteKingPosition),
+            inCheckWhite = false,
+            piecesBlack = listOf(King(Set.BLACK)),
+            positionsBlack = listOf(blackKingPosition),
+            inCheckBlack = false,
             winState = WinState.NONE
         )
 
         val viewModel = GameViewModel(initialState)
 
-        viewModel.moveCPU(Set.WHITE) { enemyPositions, enemyPieces, allyPositions, allyPieces ->
-            Pair(INVALID_POSITION, 0) // dummy move
+        val newWhiteRookPosition = Pair(4, 4)
+
+        viewModel.playerMove(
+            selectedPieceIndex = 0,
+            newPosition = newWhiteRookPosition
+        )
+
+        val gameState = viewModel.gameState.value
+
+        assertTrue("Black should be in check after player move", gameState.inCheckBlack)
+        assertTrue("Game should continue after King is in check", gameState.winState == WinState.NONE)
+    }
+
+    @Test
+    fun `white King in check does not immediately end the game after moveCPU`() {
+        val whiteKingPosition = Pair(7, 4)
+        val blackBishopPosition = Pair(0, 5)
+        val blackKingPosition = Pair(0, 4)
+
+        val initialState = GameUiState(
+            turn = Set.WHITE,
+            piecesWhite = listOf(King(Set.WHITE)),
+            positionsWhite = listOf(whiteKingPosition),
+            inCheckWhite = false,
+            piecesBlack = listOf(Bishop(Set.BLACK), King(Set.BLACK)),
+            positionsBlack = listOf(blackBishopPosition, blackKingPosition),
+            inCheckBlack = false,
+            winState = WinState.NONE
+        )
+
+        val viewModel = GameViewModel(initialState)
+
+        val newBlackBishopPosition = Pair(4, 1)
+
+        viewModel.moveCPU(Set.BLACK) {
+            enemyPositions: List<Pair<Int, Int>>,
+            enemyPieces: List<Piece>,
+            allyPositions: List<Pair<Int, Int>>,
+            allyPieces: List<Piece> ->
+            Pair(newBlackBishopPosition, 0)
         }
 
-        assertTrue(
-            "Game should NOT be ended just because the King is in check",
-            WinState.NONE == viewModel.gameState.value.winState
-        )
+        val gameState = viewModel.gameState.value
+
+        assertTrue("White should be in check after CPU move", gameState.inCheckWhite)
+        assertTrue("Game should continue after King is in check", gameState.winState == WinState.NONE)
     }
 }
