@@ -62,18 +62,21 @@ class GameViewModel(
             //  Would require filtering possibleMoves or rechecking after movement to see if
             //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-            // TODO [CLEANUP]: Move to a different function (called before allowing Player to select a move)
-            // If the current player is in Check,
-            if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-                println("Must escape check!")
+            val indexOfKing = gameState.value.piecesWhite.indexOfFirst { it is King }
+            val kingPosition = if (selectedPieceIndex == indexOfKing) newPosition else gameState.value.positionsWhite[indexOfKing]
+            val allyPositionsAfterMove = gameState.value.positionsWhite.toMutableList().also {
+                it[selectedPieceIndex] = newPosition
             }
-            // If the opposing player is in Check
-            if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
-                println("The enemy is already in Check, game over! You win!")
-                // Current player wins
-                _gameState.value = _gameState.value.copy(
-                    winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK
-                )
+            val allyInCheck = checkCheck(
+                kingPosition = kingPosition,
+                enemyPositions = gameState.value.positionsBlack,
+                enemyPieces = gameState.value.piecesBlack,
+                allyPositions = allyPositionsAfterMove
+            )
+
+            // TODO: Handle UI warning for illegal move into Check
+            if(allyInCheck) {
+                println("Cannot move into Check!")
                 return
             }
 

@@ -242,3 +242,44 @@ fun hasLegalMoves(
     }
     return false
 }
+
+fun getLegalMovesForPiece(
+    pieceIndex: Int,
+    enemyPositions: List<Pair<Int, Int>>,
+    enemyPieces: List<Piece>,
+    allyPositions: List<Pair<Int, Int>>,
+    allyPieces: List<Piece>
+) : List<Pair<Int, Int>> {
+    val legalMoves : MutableList<Pair<Int, Int>> = mutableListOf()
+    // Using getPossibleMoves,
+    val possibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
+    val kingIndex = allyPieces.indexOfFirst { it is King }
+    var kingPosition: Pair<Int, Int>
+    val updatedAllyPositions = allyPositions.toMutableList()
+    for (move in possibleMoves) {
+        // move = Pair(Pair(y,x), pieceIndex)
+        updatedAllyPositions[move.second] = move.first
+        if (move.second == kingIndex && move.second == pieceIndex) {
+            kingPosition = move.first
+            if (!checkCheck(
+                    kingPosition = kingPosition,
+                    enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = updatedAllyPositions
+                )) {
+                legalMoves += move.first
+            }
+        } else if (move.second == pieceIndex) {
+            kingPosition = allyPositions[kingIndex]
+            if (!checkCheck(
+                    kingPosition = kingPosition,
+                    enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = updatedAllyPositions
+                )) {
+                legalMoves += move.first
+            }
+        }
+    }
+    return legalMoves
+}

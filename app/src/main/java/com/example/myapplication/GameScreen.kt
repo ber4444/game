@@ -301,10 +301,12 @@ fun Board(
             if(pieceIndex != -1) {
                 // Get the possible moves for the current position
                 selectedPossibleMoves.value =
-                    gameState.piecesWhite[pieceIndex].getValidMovesPositions(
-                        gameState.selectedSquare,
-                        gameState.positionsBlack,
-                        gameState.positionsWhite
+                    getLegalMovesForPiece(
+                        pieceIndex = pieceIndex,
+                        enemyPieces = gameState.piecesBlack,
+                        enemyPositions = gameState.positionsBlack,
+                        allyPositions = gameState.positionsWhite,
+                        allyPieces = gameState.piecesWhite
                     )
             }
         }
