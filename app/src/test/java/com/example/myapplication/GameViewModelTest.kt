@@ -168,4 +168,60 @@ class GameViewModelTest {
             !kingIsDead
         )
     }
+
+    @Test
+    fun `verify King is in check but not checkmate`() {
+        val kingPosition = Pair(3,3)
+        val rookPosition = Pair(3,0)
+        val killingGameState = GameUiState(
+            positionsBlack = listOf(rookPosition),
+            positionsWhite = listOf(kingPosition),
+            piecesBlack = listOf(Rook(Set.BLACK)),
+            piecesWhite = listOf(King(Set.WHITE))
+        )
+        val kingInCheck = checkCheck(
+            kingPosition = kingPosition,
+            enemyPositions = killingGameState.positionsBlack,
+            enemyPieces = killingGameState.piecesBlack,
+            allyPositions = killingGameState.positionsWhite
+        )
+
+        val playerHasLegalMove = hasLegalMoves(
+            enemyPositions = killingGameState.positionsBlack,
+            enemyPieces = killingGameState.piecesBlack,
+            allyPositions = killingGameState.positionsWhite,
+            allyPieces = killingGameState.piecesWhite,
+        )
+        assertTrue("King should be in check and still have valid move", kingInCheck && playerHasLegalMove)
+    }
+
+    @Test
+    fun `verify King is in stalemate`() {
+        val kingPosition = Pair(3,3)
+        val rookPositions = listOf(
+            Pair(0,2), Pair(2,0), Pair(4,5), Pair(5,4)
+        )
+        val killingGameState = GameUiState(
+            positionsBlack = rookPositions,
+            positionsWhite = listOf(kingPosition),
+            piecesBlack = listOf(
+                Rook(Set.BLACK), Rook(Set.BLACK), Rook(Set.BLACK), Rook(Set.BLACK)
+            ),
+            piecesWhite = listOf(King(Set.WHITE))
+        )
+        val kingInCheck = checkCheck(
+            kingPosition = kingPosition,
+            enemyPositions = killingGameState.positionsBlack,
+            enemyPieces = killingGameState.piecesBlack,
+            allyPositions = killingGameState.positionsWhite
+        )
+
+        val playerHasLegalMove = hasLegalMoves(
+            enemyPositions = killingGameState.positionsBlack,
+            enemyPieces = killingGameState.piecesBlack,
+            allyPositions = killingGameState.positionsWhite,
+            allyPieces = killingGameState.piecesWhite,
+        )
+        assertTrue("King should be not be in check, but no legal moves (stalemate)", !kingInCheck && !playerHasLegalMove)
+    }
 }

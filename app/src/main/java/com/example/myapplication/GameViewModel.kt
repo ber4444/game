@@ -227,10 +227,19 @@ class GameViewModel(
         // TODO [LOGIC ERROR]: Can put self in Check
         // If the current team is in Check,
         if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-            // Current team loses
-            _gameState.value = _gameState.value.copy(
-                winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
-            return
+            // Current team loses if no legal moves to escape Check
+            if (hasLegalMoves(enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = allyPositions,
+                    allyPieces = allyPieces
+            )) {
+                println("Must escape check!")
+            } else {
+                println("No legal moves to escape check! You lose!")
+                _gameState.value = _gameState.value.copy(
+                    winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
+                return
+            }
         }
 
         // TODO [LOGIC]: Logic not implemented

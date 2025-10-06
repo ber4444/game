@@ -48,14 +48,34 @@ fun pickMoveCPU(
     val allPossibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
     if(allPossibleMoves.isEmpty()) return Pair(INVALID_POSITION, -1)
 
+    // Filter out moves that would put the King in Check based on checkCheck function
+    val kingIndex = allyPieces.indexOfFirst { it is King }
+    val safeMoves = allPossibleMoves.filter { move ->
+        if (kingIndex == move.second) {
+            !checkCheck(kingPosition = move.first,
+                enemyPositions = enemyPositions,
+                enemyPieces = enemyPieces,
+                allyPositions = allyPositions.toMutableList().also {
+                    it[move.second] = move.first
+                })
+        } else {
+            !checkCheck(kingPosition = allyPositions[kingIndex],
+                enemyPositions = enemyPositions,
+                enemyPieces = enemyPieces,
+                allyPositions = allyPositions.toMutableList().also {
+                    it[move.second] = move.first
+                })
+        }
+    }
+
     // Focus on capturing enemy Pieces
-    val captureMoves = allPossibleMoves.filter { it.first in enemyPositions }
+    val captureMoves = safeMoves.filter { it.first in enemyPositions }
     if(captureMoves.isNotEmpty()) {
         return captureMoves.random()
     }
 
     // Otherwise, return a random possible move
-    return allPossibleMoves.random()
+    return safeMoves.random()
 }
 
 // Get the possible moves for all ally Pieces
@@ -180,4 +200,45 @@ fun checkCheck(
 
     // Nobody can reach the King right now
     return false */
+}
+
+// Return if the given team has any valid moves
+fun hasLegalMoves(
+    enemyPositions: List<Pair<Int, Int>>,
+    enemyPieces: List<Piece>,
+    allyPositions: List<Pair<Int, Int>>,
+    allyPieces: List<Piece>
+): Boolean {
+    // Using getPossibleMoves,
+    val possibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
+    val kingIndex = allyPieces.indexOfFirst { it is King }
+    var kingPosition: Pair<Int, Int>
+    val updatedAllyPositions = allyPositions.toMutableList()
+    for (move in possibleMoves) {
+        // move = Pair(Pair(y,x), pieceIndex)
+        // If there is at least one valid move, return true
+        updatedAllyPositions[move.second] = move.first
+        if (move.second == kingIndex) {
+            kingPosition = move.first
+            if (!checkCheck(
+                    kingPosition = kingPosition,
+                    enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = updatedAllyPositions
+            )) {
+                return true
+            }
+        } else {
+            kingPosition = allyPositions[kingIndex]
+            if (!checkCheck(
+                    kingPosition = kingPosition,
+                    enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = updatedAllyPositions
+                )) {
+                return true
+            }
+        }
+    }
+    return false
 }
