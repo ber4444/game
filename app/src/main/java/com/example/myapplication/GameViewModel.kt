@@ -208,10 +208,6 @@ class GameViewModel(
         //  Would require filtering possibleMoves or rechecking after movement to see if
         //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-        // If the current team is in Check,
-        if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-            println("Must escape check!")
-        }
         // If the opposite team is in Check,
         if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
             // Current team wins
@@ -224,7 +220,6 @@ class GameViewModel(
         val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
         val newPosition = positionIndexPair.first
 
-        // TODO [LOGIC ERROR]: Can put self in Check
         // If the current team is in Check,
         if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
             // Current team loses if no legal moves to escape Check
