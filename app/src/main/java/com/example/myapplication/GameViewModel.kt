@@ -242,15 +242,24 @@ class GameViewModel(
             }
         }
 
-        // TODO [LOGIC]: Logic not implemented
+        // TODO [LOGIC]: Logic does not include endless moves (i.e. 2 kings left)
         // A Stalemate happens when neither player is in Check,
         //  but all possible moves for the current player will put them in Check
         // if(!inCheck && (possibleMove.filter { it.(doesn't put self in Check) } ).isEmpty())
-        if (newPosition == INVALID_POSITION) {
-            _gameState.value = _gameState.value.copy(
-                winState = WinState.STALEMATE
-            )
-            return
+        else if ((!_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (!_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
+            if (hasLegalMoves(enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = allyPositions,
+                    allyPieces = allyPieces
+                )) {
+                println("Continue playing, legal moves available.")
+            } else {
+                println("No legal moves available, Stalemate!")
+                _gameState.value = _gameState.value.copy(
+                    winState = WinState.STALEMATE
+                )
+                return
+            }
         }
 
         // Update the game state, includes capturing of Pieces
