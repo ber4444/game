@@ -45,37 +45,23 @@ fun pickMoveCPU(
     allyPieces: List<Piece>
 ): Pair<Pair<Int, Int>, Int> {
     // Determine all possible moves given the state of the board
-    val allPossibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
+    val allPossibleMoves = getAllLegalMoves(
+        enemyPositions = enemyPositions,
+        enemyPieces = enemyPieces,
+        allyPositions = allyPositions,
+        allyPieces = allyPieces
+    )
     if(allPossibleMoves.isEmpty()) return Pair(INVALID_POSITION, -1)
 
-    // Filter out moves that would put the King in Check based on checkCheck function
-    val kingIndex = allyPieces.indexOfFirst { it is King }
-    val safeMoves = allPossibleMoves.filter { move ->
-        if (kingIndex == move.second) {
-            !checkCheck(kingPosition = move.first,
-                enemyPositions = enemyPositions,
-                enemyPieces = enemyPieces,
-                allyPositions = allyPositions.toMutableList().also {
-                    it[move.second] = move.first
-                })
-        } else {
-            !checkCheck(kingPosition = allyPositions[kingIndex],
-                enemyPositions = enemyPositions,
-                enemyPieces = enemyPieces,
-                allyPositions = allyPositions.toMutableList().also {
-                    it[move.second] = move.first
-                })
-        }
-    }
 
     // Focus on capturing enemy Pieces
-    val captureMoves = safeMoves.filter { it.first in enemyPositions }
+    val captureMoves = allPossibleMoves.filter { it.first in enemyPositions }
     if(captureMoves.isNotEmpty()) {
         return captureMoves.random()
     }
 
     // Otherwise, return a random possible move
-    return safeMoves.random()
+    return allPossibleMoves.random()
 }
 
 // Get the possible moves for all ally Pieces

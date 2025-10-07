@@ -216,9 +216,6 @@ class GameViewModel(
             return
         }
 
-        // Pick a move using the given pickMove function
-        val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
-        val newPosition = positionIndexPair.first
 
         // If the current team is in Check,
         if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
@@ -256,6 +253,10 @@ class GameViewModel(
                 return
             }
         }
+
+        // Pick a move using the given pickMove function
+        val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
+        val newPosition = positionIndexPair.first
 
         // Update the game state, includes capturing of Pieces
         _gameState.value = deriveNewGameState(
