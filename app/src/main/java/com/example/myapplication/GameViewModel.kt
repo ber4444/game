@@ -62,17 +62,14 @@ class GameViewModel(
             //  Would require filtering possibleMoves or rechecking after movement to see if
             //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-            val allyPositionsAfterMove = gameState.value.positionsWhite.toMutableList().also {
-                it[selectedPieceIndex] = newPosition
-            }
             val legalMoves = getAllLegalMoves(
                 enemyPositions = gameState.value.positionsBlack,
                 enemyPieces = gameState.value.piecesBlack,
-                allyPositions = allyPositionsAfterMove,
+                allyPositions = gameState.value.positionsWhite,
                 allyPieces = gameState.value.piecesWhite
             )
 
-            if(legalMoves.any { move -> move.first == newPosition}) {
+            if(legalMoves.none { move -> move.first == newPosition && move.second == selectedPieceIndex }) {
                 println("Cannot move into Check!")
                 return
             }
