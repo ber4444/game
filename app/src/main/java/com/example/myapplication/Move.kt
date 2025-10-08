@@ -196,13 +196,33 @@ fun hasLegalMoves(
     allyPieces: List<Piece>
 ): Boolean {
     // Using getPossibleMoves,
-    val legalMoves = getAllLegalMoves(
-        enemyPositions = enemyPositions,
-        enemyPieces = enemyPieces,
-        allyPositions = allyPositions,
-        allyPieces = allyPieces
-    )
-    return legalMoves.isNotEmpty()
+    val possibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
+    val kingIndex = allyPieces.indexOfFirst { it is King }
+    for (move in possibleMoves) {
+        // move = Pair(Pair(y,x), pieceIndex)
+        // If there is at least one valid move, return true
+        val kingPosition = if (move.second == kingIndex) move.first else allyPositions[kingIndex]
+        val updatedAllyPositions = allyPositions.toMutableList()
+        updatedAllyPositions[move.second] = move.first
+        var tempEnemyPositions = enemyPositions
+        var tempEnemyPieces = enemyPieces
+        val capturedEnemyIndex = enemyPositions.indexOf(move.first)
+        if (capturedEnemyIndex != -1) {
+            // If a capture happened, create new lists WITHOUT the captured piece.
+            tempEnemyPositions = enemyPositions.filterIndexed { index, _ -> index != capturedEnemyIndex }
+            tempEnemyPieces = enemyPieces.filterIndexed { index, _ -> index != capturedEnemyIndex }
+        }
+        val isKingSafe = !checkCheck(
+            kingPosition = kingPosition,
+            enemyPositions = tempEnemyPositions,
+            enemyPieces = tempEnemyPieces,
+            allyPositions = updatedAllyPositions
+        )
+        if (isKingSafe) {
+            return true
+        }
+    }
+    return false
 }
 
 fun getLegalMovesForPiece(
