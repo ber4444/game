@@ -198,11 +198,11 @@ fun hasLegalMoves(
     // Using getPossibleMoves,
     val possibleMoves = getPossibleMoves(enemyPositions, allyPositions, allyPieces)
     val kingIndex = allyPieces.indexOfFirst { it is King }
-    val updatedAllyPositions = allyPositions.toMutableList()
     for (move in possibleMoves) {
         // move = Pair(Pair(y,x), pieceIndex)
         // If there is at least one valid move, return true
         val kingPosition = if (move.second == kingIndex) move.first else allyPositions[kingIndex]
+        val updatedAllyPositions = allyPositions.toMutableList()
         updatedAllyPositions[move.second] = move.first
         var tempEnemyPositions = enemyPositions
         var tempEnemyPieces = enemyPieces
