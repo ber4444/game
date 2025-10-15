@@ -62,18 +62,15 @@ class GameViewModel(
             //  Would require filtering possibleMoves or rechecking after movement to see if
             //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-            // TODO [CLEANUP]: Move to a different function (called before allowing Player to select a move)
-            // If the current player is in Check,
-            if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-                println("Must escape check!")
-            }
-            // If the opposing player is in Check
-            if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
-                println("The enemy is already in Check, game over! You win!")
-                // Current player wins
-                _gameState.value = _gameState.value.copy(
-                    winState = if(_gameState.value.turn == Set.WHITE) WinState.WHITE else WinState.BLACK
-                )
+            val legalMoves = getAllLegalMoves(
+                enemyPositions = gameState.value.positionsBlack,
+                enemyPieces = gameState.value.piecesBlack,
+                allyPositions = gameState.value.positionsWhite,
+                allyPieces = gameState.value.piecesWhite
+            )
+
+            if(legalMoves.none { move -> move.first == newPosition && move.second == selectedPieceIndex }) {
+                println("Cannot move into Check!")
                 return
             }
 
@@ -208,10 +205,6 @@ class GameViewModel(
         //  Would require filtering possibleMoves or rechecking after movement to see if
         //  the King moved into enemy range or an ally is no longer blocking enemy movement
 
-        // If the current team is in Check,
-        if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-            println("Must escape check!")
-        }
         // If the opposite team is in Check,
         if((_gameState.value.inCheckWhite && _gameState.value.turn != Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn != Set.BLACK)) {
             // Current team wins
@@ -220,29 +213,47 @@ class GameViewModel(
             return
         }
 
-        // Pick a move using the given pickMove function
-        val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
-        val newPosition = positionIndexPair.first
 
-        // TODO [LOGIC ERROR]: Can put self in Check
         // If the current team is in Check,
         if((_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
-            // Current team loses
-            _gameState.value = _gameState.value.copy(
-                winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
-            return
+            // Current team loses if no legal moves to escape Check
+            if (hasLegalMoves(enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = allyPositions,
+                    allyPieces = allyPieces
+            )) {
+                println("Must escape check!")
+            } else {
+                println("No legal moves to escape check! You lose!")
+                _gameState.value = _gameState.value.copy(
+                    winState = if(_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK)
+                return
+            }
         }
 
-        // TODO [LOGIC]: Logic not implemented
+        // TODO [LOGIC]: Logic does not include endless moves (i.e. 2 kings left)
         // A Stalemate happens when neither player is in Check,
         //  but all possible moves for the current player will put them in Check
         // if(!inCheck && (possibleMove.filter { it.(doesn't put self in Check) } ).isEmpty())
-        if (newPosition == INVALID_POSITION) {
-            _gameState.value = _gameState.value.copy(
-                winState = WinState.STALEMATE
-            )
-            return
+        else if ((!_gameState.value.inCheckWhite && _gameState.value.turn == Set.WHITE) || (!_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)) {
+            if (hasLegalMoves(enemyPositions = enemyPositions,
+                    enemyPieces = enemyPieces,
+                    allyPositions = allyPositions,
+                    allyPieces = allyPieces
+                )) {
+                println("Continue playing, legal moves available.")
+            } else {
+                println("No legal moves available, Stalemate!")
+                _gameState.value = _gameState.value.copy(
+                    winState = WinState.STALEMATE
+                )
+                return
+            }
         }
+
+        // Pick a move using the given pickMove function
+        val positionIndexPair = pickMove(enemyPositions, enemyPieces, allyPositions, allyPieces)
+        val newPosition = positionIndexPair.first
 
         // Update the game state, includes capturing of Pieces
         _gameState.value = deriveNewGameState(
