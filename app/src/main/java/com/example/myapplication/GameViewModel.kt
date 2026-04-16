@@ -23,6 +23,29 @@ class GameViewModel(
 
     private var gameMoves: Job? = null
 
+    /** The Stockfish engine instance, if available. */
+    private var stockfishEngine: StockfishEngine? = null
+
+    /**
+     * Initialize the Stockfish engine from the app's native library directory.
+     * Should be called from the Activity after the ViewModel is created.
+     * If Stockfish is not available, the app falls back to the built-in CPU AI.
+     */
+    fun initStockfish(nativeLibraryDir: String) {
+        val engine = StockfishEngine(nativeLibraryDir)
+        if (engine.isAvailable()) {
+            if (engine.start()) {
+                stockfishEngine = engine
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stockfishEngine?.shutdown()
+        stockfishEngine = null
+    }
+
     // Update the gameState's autoPlay variable (used to start/stop AutoPlay mode)
     fun setAutoPlay(newVal : Boolean) {
         _gameState.value = gameState.value.copy(autoPlay = newVal)
@@ -110,8 +133,7 @@ class GameViewModel(
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
-                pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces) // DEBUG: CPU vs CPU movement
-                //pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
+                pickMoveStockfish(stockfishEngine, _gameState.value, enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
         }
     }
@@ -131,7 +153,7 @@ class GameViewModel(
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
-                pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces)
+                pickMoveStockfish(stockfishEngine, _gameState.value, enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
         } else {
             // Unlock the UI buttons for the user

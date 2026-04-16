@@ -21,6 +21,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val viewModel: GameViewModel by viewModels()
 
+        // Initialize Stockfish engine if available (falls back to built-in AI otherwise)
+        viewModel.initStockfish(applicationInfo.nativeLibraryDir)
+
         setContent {
             MyApplicationTheme {
                 Surface(modifier = Modifier.fillMaxSize(),
