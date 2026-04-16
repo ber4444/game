@@ -26,9 +26,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +47,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
@@ -65,6 +66,7 @@ fun GameScreen(
     val gameState by viewModel.gameState.collectAsState()
     val animState by viewModel.animState.collectAsState()
     val viewState by viewModel.viewState.collectAsState()
+    val stockfishEnabled by viewModel.stockfishEnabled.collectAsState()
     val scrollState = rememberScrollState()
 
     Column(
@@ -146,31 +148,29 @@ fun GameScreen(
         // Display a spacer
         Spacer(modifier = Modifier.padding(8.dp))
 
-        // Display the AutoPlay mode toggle
-        Text("Autoplay is ${if(gameState.autoPlay) "on" else "off"}")
-
-        Row {
-            Button(
-                onClick = { viewModel.setAutoPlay(!gameState.autoPlay) },
-                enabled = !viewState.buttonLock
-            ) {
-                Text(
-                    text = stringResource(R.string.autoplay_button),
-                    style = MaterialTheme.typography.titleLarge
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = gameState.autoPlay,
+                    onCheckedChange = { viewModel.setAutoPlay(it) },
+                    enabled = !viewState.buttonLock
                 )
+                Text(text = stringResource(R.string.autoplay_label))
             }
 
-            // Display the 'Move' Button
-            Button(
-                onClick = { viewModel.startUserTurn() },
-                // Button is enabled only when game has not ended and it is White's turn
-                enabled = gameState.winState == WinState.NONE && !viewState.moveButtonLock
-            ) {
-                Text(
-                    text = stringResource(R.string.move_button),
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
+            Text(
+                text = stringResource(
+                    if (stockfishEnabled) {
+                        R.string.stockfish_enabled
+                    } else {
+                        R.string.stockfish_disabled
+                    }
+                ),
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
 
         Row {
@@ -179,14 +179,6 @@ fun GameScreen(
                 onClick = { viewModel.resetGame() }
             ) {
                 Text(stringResource(R.string.reset_button))
-            }
-
-            // Display the 'End' Button
-            Button(
-                onClick = { viewModel.setGameOver() },
-                enabled = !viewState.buttonLock
-            ) {
-                Text(stringResource(R.string.end_button))
             }
         }
     }
@@ -214,10 +206,17 @@ enum class SquareType {
     PossibleCapture // This is a possible move which will capture an enemy Piece
 }
 
+private const val BOARD_SQUARE_TEST_TAG_PREFIX = "board_square"
+
+private fun squareTestTag(position: Pair<Int, Int>, squareType: SquareType): String {
+    return "${BOARD_SQUARE_TEST_TAG_PREFIX}_${squareType.name}_${position.first}_${position.second}"
+}
+
 // A Square on the Chess Board
 @Composable
 fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean,
     squareType : SquareType = SquareType.Empty, clickable: Boolean = false,
+    testTag: String,
     onClick : (SquareType) -> Unit = {},
     content: @Composable ()-> Unit) {
     val borderWidth : Dp
@@ -271,7 +270,8 @@ fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean,
             else Color.White
         )
         .border(borderWidth, borderColor, shapeType)
-        .clickable(clickable, onClickLabel = null, role = null, onClick = { onClick(squareType) }),
+        .clickable(clickable, onClickLabel = null, role = null, onClick = { onClick(squareType) })
+        .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -378,7 +378,10 @@ fun Board(
                                     squareAvgSizePx.value = it.size // Needs to be calculated once
                                 }
                             },
-                            (row + column) % 2 == 1, squareType, !gameState.autoPlay && clickable,
+                            isDarkSquare = (row + column) % 2 == 1,
+                            squareType = squareType,
+                            clickable = !gameState.autoPlay && clickable,
+                            testTag = squareTestTag(currentSquare, squareType),
                             { squareType ->
                                 when (squareType) {
                                     SquareType.PossibleMove, SquareType.PossibleCapture -> {

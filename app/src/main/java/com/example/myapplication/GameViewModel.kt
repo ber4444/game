@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.content.res.AssetManager
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 
 class GameViewModel(
     gameState: GameUiState = GameUiState()
@@ -21,17 +23,63 @@ class GameViewModel(
     private val _viewState = MutableStateFlow(ViewState())
     val viewState: StateFlow<ViewState> = _viewState
 
+    private val _stockfishEnabled = MutableStateFlow(false)
+    val stockfishEnabled: StateFlow<Boolean> = _stockfishEnabled
+
     private var gameMoves: Job? = null
+
+    /** The Stockfish engine instance, if available. */
+    private var stockfishEngine: StockfishEngine? = null
+
+    val isUsingStockfish: Boolean
+        get() = stockfishEnabled.value
+
+    /**
+     * Initialize the Stockfish engine from packaged assets or the app's native library directory.
+     * Should be called from the Activity after the ViewModel is created.
+     * If Stockfish is not available, the app falls back to the built-in CPU AI.
+     */
+    fun initStockfish(
+        nativeLibraryDir: String,
+        filesDir: File,
+        assetManager: AssetManager,
+        supportedAbis: Array<String>
+    ) {
+        stockfishEngine?.shutdown()
+        stockfishEngine = null
+        _stockfishEnabled.value = false
+
+        val engine = StockfishEngine(
+            nativeLibraryDir = nativeLibraryDir,
+            filesDir = filesDir,
+            assetManager = assetManager,
+            supportedAbis = supportedAbis
+        )
+        if (engine.isAvailable()) {
+            if (engine.start()) {
+                stockfishEngine = engine
+                _stockfishEnabled.value = true
+                println("Stockfish engine initialized successfully")
+            } else {
+                println("Stockfish engine is available, but it did not start")
+            }
+        } else {
+            println("Stockfish engine is unavailable")
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stockfishEngine?.shutdown()
+        stockfishEngine = null
+        _stockfishEnabled.value = false
+    }
 
     // Update the gameState's autoPlay variable (used to start/stop AutoPlay mode)
     fun setAutoPlay(newVal : Boolean) {
         _gameState.value = gameState.value.copy(autoPlay = newVal)
     }
 
-    // DEBUG: End the game in a draw
-    fun setGameOver() {
-        _gameState.value = gameState.value.copy(winState = WinState.DRAW)
-    }
 
     // Hide the game over window, but don't allow the user to edit the gameState
     fun hideWindow() {
@@ -110,8 +158,7 @@ class GameViewModel(
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
-                pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces) // DEBUG: CPU vs CPU movement
-                //pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
+                pickMoveStockfish(stockfishEngine, _gameState.value, enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
         }
     }
@@ -131,7 +178,7 @@ class GameViewModel(
                 enemyPieces: List<Piece>,
                 allyPositions: List<Pair<Int, Int>>,
                 allyPieces: List<Piece> ->
-                pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces)
+                pickMoveStockfish(stockfishEngine, _gameState.value, enemyPositions, enemyPieces, allyPositions, allyPieces)
             }
         } else {
             // Unlock the UI buttons for the user

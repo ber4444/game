@@ -1,5 +1,7 @@
 package com.example.myapplication
 
+import android.util.Log
+
 // Used to represent an invalid position on the board
 //  y and x values must always be between 0 and 8
 val INVALID_POSITION = Pair(-1, -1)
@@ -35,6 +37,62 @@ fun pickMoveRandom(
 
     // Return the newPosition to update the PositionIndex with
     return Pair(newPosition, newPositionIndex)
+}
+
+/**
+ * Pick a move using the Stockfish chess engine.
+ * Converts the current board state to FEN, queries Stockfish for the best move,
+ * and converts the result back to the app's move format.
+ * Falls back to [pickMoveCPU] if Stockfish is unavailable or returns an invalid move.
+ *
+ * @param engine The Stockfish engine instance (may be null)
+ * @param gameState The current game UI state (needed for FEN conversion)
+ * @param enemyPositions Positions of the opposing team's pieces
+ * @param enemyPieces The opposing team's pieces
+ * @param allyPositions Positions of the current team's pieces
+ * @param allyPieces The current team's pieces
+ * @return A Pair of (new position, piece index) representing the chosen move
+ */
+fun pickMoveStockfish(
+    engine: StockfishEngine?,
+    gameState: GameUiState,
+    enemyPositions: List<Pair<Int, Int>>,
+    enemyPieces: List<Piece>,
+    allyPositions: List<Pair<Int, Int>>,
+    allyPieces: List<Piece>
+): Pair<Pair<Int, Int>, Int> {
+    if (engine == null) {
+        return pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces)
+    }
+
+    // Convert board state to FEN
+    val fen = FenConverter.gameStateToFen(gameState)
+    Log.d("Move", "Stockfish FEN: $fen")
+
+    // Query Stockfish for the best move
+    val bestMoveUci = engine.getBestMove(fen)
+
+    if (bestMoveUci != null) {
+        // Convert UCI move to app format
+        val appMove = UciMoveConverter.uciMoveToAppMove(bestMoveUci, allyPositions)
+        if (appMove != null) {
+            // Validate that this is actually a legal move
+            val allLegal = getAllLegalMoves(enemyPositions, enemyPieces, allyPositions, allyPieces)
+            if (allLegal.any { it.first == appMove.first && it.second == appMove.second }) {
+                Log.d("Move", "Stockfish move accepted: $bestMoveUci -> ${appMove.first}")
+                return appMove
+            } else {
+                Log.w("Move", "Stockfish move $bestMoveUci is not legal in app, falling back")
+            }
+        } else {
+            Log.w("Move", "Could not convert Stockfish move $bestMoveUci, falling back")
+        }
+    } else {
+        Log.w("Move", "Stockfish returned no move, falling back to CPU")
+    }
+
+    // Fall back to the simple CPU algorithm
+    return pickMoveCPU(enemyPositions, enemyPieces, allyPositions, allyPieces)
 }
 
 // From the given list of moves, pick a move based on a CPU algorithm

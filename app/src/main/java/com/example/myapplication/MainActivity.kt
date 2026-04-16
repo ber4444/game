@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -20,6 +21,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val viewModel: GameViewModel by viewModels()
+
+        // Initialize Stockfish engine if available (falls back to built-in AI otherwise)
+        viewModel.initStockfish(
+            nativeLibraryDir = applicationInfo.nativeLibraryDir,
+            filesDir = filesDir,
+            assetManager = assets,
+            supportedAbis = Build.SUPPORTED_ABIS
+        )
 
         setContent {
             MyApplicationTheme {
