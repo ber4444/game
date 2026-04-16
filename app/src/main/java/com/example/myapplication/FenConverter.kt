@@ -32,6 +32,19 @@ object FenConverter {
         return if (piece.set == Set.WHITE) base.uppercaseChar() else base
     }
 
+    fun fenCharToPiece(pieceChar: Char): Piece {
+        val set = if (pieceChar.isUpperCase()) Set.WHITE else Set.BLACK
+        return when (pieceChar.lowercaseChar()) {
+            'k' -> King(set)
+            'q' -> Queen(set)
+            'r' -> Rook(set)
+            'b' -> Bishop(set)
+            'n' -> Knight(set)
+            'p' -> Pawn(set)
+            else -> throw IllegalArgumentException("Unsupported FEN piece: $pieceChar")
+        }
+    }
+
     /**
      * Convert the current game state to a FEN string.
      *
@@ -90,5 +103,63 @@ object FenConverter {
         val fullmoveNumber = 1
 
         return "$piecePlacement $activeColor $castling $enPassant $halfmoveClock $fullmoveNumber"
+    }
+
+    /**
+     * Convert a FEN string into the app's board model.
+     * Castling, en passant and counters are ignored because the app does not track them.
+     */
+    fun fenToGameState(fen: String): GameUiState {
+        val parts = fen.trim().split(" ")
+        require(parts.size >= 2) { "Invalid FEN: $fen" }
+
+        val rows = parts[0].split("/")
+        require(rows.size == BOARD_SIZE) { "Invalid FEN board rows: ${parts[0]}" }
+
+        val piecesWhite = mutableListOf<Piece>()
+        val positionsWhite = mutableListOf<Pair<Int, Int>>()
+        val piecesBlack = mutableListOf<Piece>()
+        val positionsBlack = mutableListOf<Pair<Int, Int>>()
+
+        rows.forEachIndexed { rowIndex, row ->
+            var columnIndex = 0
+            row.forEach { symbol ->
+                when {
+                    symbol.isDigit() -> {
+                        columnIndex += symbol.digitToInt()
+                    }
+
+                    else -> {
+                        require(columnIndex in 0 until BOARD_SIZE) { "Invalid FEN column index for row: $row" }
+                        val piece = fenCharToPiece(symbol)
+                        val position = Pair(rowIndex, columnIndex)
+                        if (piece.set == Set.WHITE) {
+                            piecesWhite += piece
+                            positionsWhite += position
+                        } else {
+                            piecesBlack += piece
+                            positionsBlack += position
+                        }
+                        columnIndex++
+                    }
+                }
+            }
+
+            require(columnIndex == BOARD_SIZE) { "Invalid FEN row width: $row" }
+        }
+
+        val turn = when (parts[1]) {
+            "w" -> Set.WHITE
+            "b" -> Set.BLACK
+            else -> throw IllegalArgumentException("Invalid active color in FEN: ${parts[1]}")
+        }
+
+        return GameUiState(
+            turn = turn,
+            piecesWhite = piecesWhite,
+            positionsWhite = positionsWhite,
+            piecesBlack = piecesBlack,
+            positionsBlack = positionsBlack
+        )
     }
 }
