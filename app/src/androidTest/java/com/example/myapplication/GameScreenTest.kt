@@ -25,6 +25,7 @@ import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -40,9 +41,9 @@ class GameScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Move").performClick()
+        val movedWhitePieceTag = performRandomPlayerMove()
 
-        composeTestRule.onNodeWithContentDescription(King(Set.WHITE).asset.toString()).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(movedWhitePieceTag).assertIsDisplayed()
     }
 
     @Test
@@ -87,18 +88,22 @@ class GameScreenTest {
             positionsBlack = listOf()
         )
 
+        val viewModel = GameViewModel(testGameState)
+
         composeTestRule.setContent {
             MyApplicationTheme {
                 GameScreen(
                     WindowWidthSizeClass.Medium,
-                    GameViewModel(
-                        testGameState
-                    )
+                    viewModel
                 )
             }
         }
 
-        composeTestRule.onNodeWithText("Move").performClick()
+        composeTestRule.runOnIdle {
+            viewModel.moveCPU { _, _, _, _ ->
+                error("Expected stalemate detection before move selection")
+            }
+        }
 
         val winnerText = getInstrumentation().targetContext.getString(
             R.string.game_end_message_no_winner,
@@ -181,6 +186,71 @@ class GameScreenTest {
         assertTrue(
             "Expected chessboard to be below status bar (≥ $statusBarHeightPx px), but was at $chessboardTop px",
             chessboardTop >= statusBarHeightPx
+        )
+    }
+
+    private fun performRandomPlayerMove(): String {
+        val random = Random(0)
+        composeTestRule.waitForIdle()
+        val whitePieceTags = existingSquareTags(SquareType.WhitePiece).shuffled(random)
+
+        for (pieceTag in whitePieceTags) {
+            composeTestRule.onNodeWithTag(pieceTag).performClick()
+            composeTestRule.waitForIdle()
+
+            val moveTargetTags = (
+                existingSquareTags(SquareType.PossibleMove) +
+                    existingSquareTags(SquareType.PossibleCapture)
+                )
+                .distinct()
+
+            if (moveTargetTags.isNotEmpty()) {
+                val selectedMoveTag = moveTargetTags.random(random)
+                val movedWhitePieceTag = selectedMoveTag.toWhitePieceSquareTag()
+
+                composeTestRule.onNodeWithTag(selectedMoveTag).performClick()
+                composeTestRule.waitUntil(timeoutMillis = 5_000) {
+                    composeTestRule
+                        .onAllNodesWithTag(movedWhitePieceTag)
+                        .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                        .isNotEmpty()
+                }
+
+                return movedWhitePieceTag
+            }
+        }
+
+        throw AssertionError("Expected to find a white piece with at least one legal move")
+    }
+
+    private fun existingSquareTags(squareType: SquareType): List<String> {
+        return allBoardSquareTags(squareType).filter { tag ->
+            composeTestRule
+                .onAllNodesWithTag(tag)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                .isNotEmpty()
+        }
+    }
+
+    private fun allBoardSquareTags(squareType: SquareType): List<String> {
+        return (0 until BOARD_SIZE).flatMap { row ->
+            (0 until BOARD_SIZE).map { column ->
+                boardSquareTag(squareType, row, column)
+            }
+        }
+    }
+
+    private fun boardSquareTag(squareType: SquareType, row: Int, column: Int): String {
+        return "board_square_${squareType.name}_${row}_${column}"
+    }
+
+    private fun String.toWhitePieceSquareTag(): String {
+        return replace(
+            "board_square_${SquareType.PossibleMove.name}_",
+            "board_square_${SquareType.WhitePiece.name}_"
+        ).replace(
+            "board_square_${SquareType.PossibleCapture.name}_",
+            "board_square_${SquareType.WhitePiece.name}_"
         )
     }
 }

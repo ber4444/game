@@ -206,10 +206,17 @@ enum class SquareType {
     PossibleCapture // This is a possible move which will capture an enemy Piece
 }
 
+private const val BOARD_SQUARE_TEST_TAG_PREFIX = "board_square"
+
+private fun squareTestTag(position: Pair<Int, Int>, squareType: SquareType): String {
+    return "${BOARD_SQUARE_TEST_TAG_PREFIX}_${squareType.name}_${position.first}_${position.second}"
+}
+
 // A Square on the Chess Board
 @Composable
 fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean,
     squareType : SquareType = SquareType.Empty, clickable: Boolean = false,
+    testTag: String,
     onClick : (SquareType) -> Unit = {},
     content: @Composable ()-> Unit) {
     val borderWidth : Dp
@@ -263,7 +270,8 @@ fun RowScope.Square(modifier: Modifier, isDarkSquare: Boolean,
             else Color.White
         )
         .border(borderWidth, borderColor, shapeType)
-        .clickable(clickable, onClickLabel = null, role = null, onClick = { onClick(squareType) }),
+        .clickable(clickable, onClickLabel = null, role = null, onClick = { onClick(squareType) })
+        .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -370,7 +378,10 @@ fun Board(
                                     squareAvgSizePx.value = it.size // Needs to be calculated once
                                 }
                             },
-                            (row + column) % 2 == 1, squareType, !gameState.autoPlay && clickable,
+                            isDarkSquare = (row + column) % 2 == 1,
+                            squareType = squareType,
+                            clickable = !gameState.autoPlay && clickable,
+                            testTag = squareTestTag(currentSquare, squareType),
                             { squareType ->
                                 when (squareType) {
                                     SquareType.PossibleMove, SquareType.PossibleCapture -> {
