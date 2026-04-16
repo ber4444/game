@@ -9,12 +9,16 @@
 
 ## Upstream source
 
-Version: `sf_18`
+Version: `sf_17`
 
 Downloaded from the official Stockfish GitHub releases:
 
-- `https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-android-armv8.tar`
-- `https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-android-armv7-neon.tar`
+- `https://github.com/official-stockfish/Stockfish/releases/download/sf_17/stockfish-android-armv8.tar`
+- `https://github.com/official-stockfish/Stockfish/releases/download/sf_17/stockfish-android-armv7-neon.tar`
+
+This version was chosen because the official `sf_18` Android binaries are about 109-110 MB each,
+which exceeds GitHub's 100 MB per-file limit. The `sf_17` Android binaries stay under that limit
+while remaining real official Stockfish builds.
 
 ## License
 
