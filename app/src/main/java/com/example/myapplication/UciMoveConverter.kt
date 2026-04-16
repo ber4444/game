@@ -28,7 +28,7 @@ object UciMoveConverter {
         require(rank in '1'..'8') { "Invalid UCI rank: $rank" }
 
         val column = file - 'a'         // 'a'->0, 'b'->1, ..., 'h'->7
-        val row = 8 - (rank - '0')      // '1'->7, '2'->6, ..., '8'->0
+        val row = '8' - rank            // '1'->7, '2'->6, ..., '8'->0
         return Pair(row, column)
     }
 

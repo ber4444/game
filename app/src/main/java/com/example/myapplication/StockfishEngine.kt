@@ -6,6 +6,8 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 /**
  * Manages the Stockfish chess engine process and communicates with it via the
@@ -32,8 +34,9 @@ class StockfishEngine(private val nativeLibraryDir: String) {
     }
 
     private var process: Process? = null
-    private var reader: BufferedReader? = null
     private var writer: OutputStreamWriter? = null
+    private var readerThread: Thread? = null
+    private val lineQueue = LinkedBlockingQueue<String>()
 
     @Volatile
     private var isReady = false
@@ -65,12 +68,30 @@ class StockfishEngine(private val nativeLibraryDir: String) {
 
         return try {
             process = Runtime.getRuntime().exec(engineFile.absolutePath)
-            reader = BufferedReader(InputStreamReader(process!!.inputStream))
+            val reader = BufferedReader(InputStreamReader(process!!.inputStream))
             writer = OutputStreamWriter(process!!.outputStream)
+
+            // Start a background thread to read engine output into a blocking queue
+            readerThread = Thread({
+                try {
+                    var line = reader.readLine()
+                    while (line != null) {
+                        Log.d(TAG, "Received: $line")
+                        lineQueue.put(line)
+                        line = reader.readLine()
+                    }
+                } catch (_: IOException) {
+                    // Expected when process is destroyed
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+            }, "StockfishReader")
+            readerThread?.isDaemon = true
+            readerThread?.start()
 
             // Initialize UCI protocol
             sendCommand("uci")
-            val uciOk = waitForResponse("uciok", timeoutMs = 5000)
+            val uciOk = waitForLine("uciok", timeoutMs = 5000)
             if (!uciOk) {
                 Log.e(TAG, "Engine did not respond with 'uciok'")
                 shutdown()
@@ -79,7 +100,7 @@ class StockfishEngine(private val nativeLibraryDir: String) {
 
             // Send initial configuration
             sendCommand("isready")
-            val ready = waitForResponse("readyok", timeoutMs = 5000)
+            val ready = waitForLine("readyok", timeoutMs = 5000)
             if (!ready) {
                 Log.e(TAG, "Engine did not respond with 'readyok'")
                 shutdown()
@@ -154,18 +175,16 @@ class StockfishEngine(private val nativeLibraryDir: String) {
         }
 
         try {
-            reader?.close()
-        } catch (_: IOException) {
-        }
-        try {
             writer?.close()
         } catch (_: IOException) {
         }
 
+        readerThread?.interrupt()
         process?.destroy()
         process = null
-        reader = null
         writer = null
+        readerThread = null
+        lineQueue.clear()
         Log.i(TAG, "Stockfish engine shut down")
     }
 
@@ -181,51 +200,35 @@ class StockfishEngine(private val nativeLibraryDir: String) {
     }
 
     /**
-     * Wait for a specific response string from the engine.
+     * Wait for a line starting with the expected prefix, using the blocking queue.
      *
-     * @param expected The string to wait for (checked with startsWith)
+     * @param expected The prefix to wait for
      * @param timeoutMs Maximum time to wait in milliseconds
-     * @return true if the expected response was received, false on timeout
+     * @return true if the expected line was received, false on timeout
      */
-    private fun waitForResponse(expected: String, timeoutMs: Long): Boolean {
+    private fun waitForLine(expected: String, timeoutMs: Long): Boolean {
         val deadline = System.currentTimeMillis() + timeoutMs
-        val currentReader = reader ?: return false
-
-        while (System.currentTimeMillis() < deadline) {
-            if (currentReader.ready()) {
-                val line = currentReader.readLine() ?: return false
-                Log.d(TAG, "Received: $line")
-                if (line.startsWith(expected)) {
-                    return true
-                }
-            } else {
-                Thread.sleep(10)
-            }
+        while (true) {
+            val remaining = deadline - System.currentTimeMillis()
+            if (remaining <= 0) return false
+            val line = lineQueue.poll(remaining, TimeUnit.MILLISECONDS) ?: return false
+            if (line.startsWith(expected)) return true
         }
-        return false
     }
 
     /**
-     * Wait for the "bestmove" response from the engine.
+     * Wait for the "bestmove" response from the engine, using the blocking queue.
      *
      * @param timeoutMs Maximum time to wait in milliseconds
      * @return The full bestmove line, or null on timeout
      */
     private fun waitForBestMove(timeoutMs: Long): String? {
         val deadline = System.currentTimeMillis() + timeoutMs
-        val currentReader = reader ?: return null
-
-        while (System.currentTimeMillis() < deadline) {
-            if (currentReader.ready()) {
-                val line = currentReader.readLine() ?: return null
-                Log.d(TAG, "Received: $line")
-                if (line.startsWith("bestmove")) {
-                    return line
-                }
-            } else {
-                Thread.sleep(10)
-            }
+        while (true) {
+            val remaining = deadline - System.currentTimeMillis()
+            if (remaining <= 0) return null
+            val line = lineQueue.poll(remaining, TimeUnit.MILLISECONDS) ?: return null
+            if (line.startsWith("bestmove")) return line
         }
-        return null
     }
 }
