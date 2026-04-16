@@ -58,7 +58,6 @@ import androidx.compose.ui.zIndex
 import com.example.myapplication.generated.resources.Res
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
@@ -90,21 +89,11 @@ fun GameScreen(
                 }
             }
             PopupWindow(resetGame) {
-                val winIcon: DrawableResource
-                val gameEndMessageFormat = when (gameState.winState) {
+                val (winIcon, gameEndMessageFormat) = when (gameState.winState) {
                     WinState.NONE -> error("Invalid Game State")
-                    WinState.WHITE -> {
-                        winIcon = Res.drawable.king_light
-                        Res.string.game_end_message_winner
-                    }
-                    WinState.BLACK -> {
-                        winIcon = Res.drawable.king_dark
-                        Res.string.game_end_message_winner
-                    }
-                    WinState.DRAW, WinState.STALEMATE -> {
-                        winIcon = Res.drawable.no_winner
-                        Res.string.game_end_message_no_winner
-                    }
+                    WinState.WHITE -> Res.drawable.king_light to Res.string.game_end_message_winner
+                    WinState.BLACK -> Res.drawable.king_dark to Res.string.game_end_message_winner
+                    WinState.DRAW, WinState.STALEMATE -> Res.drawable.no_winner to Res.string.game_end_message_no_winner
                 }
                 Icon(
                     painter = painterResource(winIcon),

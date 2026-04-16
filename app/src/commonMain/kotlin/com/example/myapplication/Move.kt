@@ -52,7 +52,7 @@ fun pickMoveRandom(
  * @return A Pair of (new position, piece index) representing the chosen move
  */
 fun pickMoveStockfish(
-    engine: StockfishEngine?,
+    engine: ChessEngine?,
     gameState: GameUiState,
     enemyPositions: List<Pair<Int, Int>>,
     enemyPieces: List<Piece>,
