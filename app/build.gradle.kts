@@ -1,7 +1,6 @@
-@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class, org.jetbrains.compose.ExperimentalComposeLibrary::class)
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
 @file:Suppress("UnstableApiUsage")
 
-import com.android.build.api.dsl.androidLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -13,7 +12,7 @@ plugins {
 }
 
 kotlin {
-    androidLibrary {
+    android {
         namespace = "com.example.myapplication"
         compileSdk = 36
         minSdk = 24
