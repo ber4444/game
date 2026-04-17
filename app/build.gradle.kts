@@ -1,3 +1,4 @@
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class, org.jetbrains.compose.ExperimentalComposeLibrary::class)
 @file:Suppress("UnstableApiUsage")
 
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
@@ -55,8 +56,10 @@ kotlin {
             implementation(compose.uiTest)
         }
 
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
         }
     }
 }
@@ -127,9 +130,4 @@ compose.desktop {
             targetFormats(TargetFormat.Deb)
         }
     }
-}
-
-dependencies {
-    debugImplementation(compose.uiTooling)
-    debugImplementation(compose.uiTestManifest)
 }

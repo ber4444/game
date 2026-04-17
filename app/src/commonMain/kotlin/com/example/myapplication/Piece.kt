@@ -1,7 +1,7 @@
 package com.example.myapplication
 
 import androidx.compose.runtime.Immutable
-import com.example.myapplication.generated.resources.Res
+import com.example.myapplication.generated.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 
 const val BOARD_SIZE = 8

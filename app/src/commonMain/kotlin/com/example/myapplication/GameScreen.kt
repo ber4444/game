@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.verticalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.safeDrawing
@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
-import com.example.myapplication.generated.resources.Res
+import com.example.myapplication.generated.resources.*
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
