@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   instrumented-tests:
     name: Build + Android tests (API ${{ matrix.api-level }}, Device ${{ matrix.profile }} / ${{ matrix.target }})
