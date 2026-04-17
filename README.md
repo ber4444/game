@@ -20,6 +20,6 @@ Compose Multiplatform chess app targeting:
 - `./gradlew :androidApp:assembleDebug` builds the Android app
 - `./gradlew :app:desktopRun` launches the desktop app
 - `./gradlew :app:wasmJsBrowserDevelopmentRun` starts the web target
-- `./gradlew :app:connectedDebugAndroidTest` runs Android UI tests
+- `./gradlew :app:connectedAndroidDeviceTest` runs Android UI tests
 
 <img width="1768" height="2208" alt="Screenshot_20260416_142830" src="https://github.com/user-attachments/assets/3dc55dee-90e0-4aad-85ea-fab60a22a132" />

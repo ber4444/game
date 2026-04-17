@@ -80,7 +80,7 @@ jobs:
           echo "Building Android, Linux desktop, and Wasm targets"
 
       - name: Build Android, Linux desktop, and Wasm targets
-        run: ./gradlew :androidApp:assembleDebug :app:assembleAndroidTest :app:check :app:desktopJar :app:packageDistributionForCurrentOS :app:wasmJsBrowserDistribution
+        run: ./gradlew :androidApp:assembleDebug :app:assembleAndroidDeviceTest :app:check :app:desktopJar :app:packageDistributionForCurrentOS :app:wasmJsBrowserDistribution
 
       - name: Run instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2.34.0
@@ -102,7 +102,7 @@ jobs:
             -grpc-use-jwt
           script: |
             echo "grpc.allowlist=*" >> ~/.android/avd/test.avd/config.ini
-            ./gradlew :app:connectedDebugAndroidTest
+            ./gradlew :app:connectedAndroidDeviceTest
 
       - name: Upload test results
         uses: actions/upload-artifact@v4.6.2

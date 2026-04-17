@@ -1,20 +1,44 @@
 @file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class, org.jetbrains.compose.ExperimentalComposeLibrary::class)
 @file:Suppress("UnstableApiUsage")
 
+import com.android.build.api.dsl.androidLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 }
 
 kotlin {
-    androidTarget {
+    androidLibrary {
+        namespace = "com.example.myapplication"
+        compileSdk = 36
+        minSdk = 24
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+        }
+
+        withHostTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            isIncludeAndroidResources = true
+        }
+
+        withDeviceTestBuilder {}.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+            emulatorControl {
+                enable = true
+            }
+        }
+
+        packaging {
+            resources {
+                excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            }
         }
     }
 
@@ -50,50 +74,18 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
         }
 
-        androidInstrumentedTest.dependencies {
-            implementation(libs.androidx.test.ext.junit)
-            implementation(libs.androidx.espresso.device)
-            implementation(compose.uiTest)
+        val androidDeviceTest by getting {
+            dependencies {
+                implementation(libs.androidx.test.ext.junit)
+                implementation(libs.androidx.espresso.device)
+                implementation(compose.uiTest)
+            }
         }
 
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
             }
-        }
-    }
-}
-
-android {
-    namespace = "com.example.myapplication"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 24
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    buildFeatures {
-        compose = true
-    }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    testOptions {
-        emulatorControl {
-            enable = true
-        }
-        unitTests {
-            isIncludeAndroidResources = true
         }
     }
 }
