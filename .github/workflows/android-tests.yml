@@ -109,17 +109,3 @@ jobs:
         with:
           name: test-results-api-${{ matrix.api-level }}-device-${{ matrix.profile }}
           path: app/build/reports/androidTests/connected/debug/index.html
-
-      - name: Upload desktop distribution
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: desktop-build-linux-api-${{ matrix.api-level }}
-          path: |
-            app/build/compose/binaries/main/
-            app/build/libs/
-
-      - name: Upload Wasm distribution
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: wasm-build-api-${{ matrix.api-level }}
-          path: app/build/dist/wasmJs/productionExecutable/
