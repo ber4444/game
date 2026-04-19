@@ -30,7 +30,12 @@ fun ChessApp(
             val windowSize = remember(maxWidth) {
                 calculateWindowWidthSizeClass(maxWidth)
             }
-            GameScreen(windowSize = windowSize, viewModel = viewModel)
+            GameScreen(
+                windowSize = windowSize,
+                viewModel = viewModel,
+                maxHeight = maxHeight, // new parameter
+                maxWidth = maxWidth    // new parameter
+            )
         }
     }
 }

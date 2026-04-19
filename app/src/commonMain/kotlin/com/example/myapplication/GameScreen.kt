@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import game.app.generated.resources.Res
@@ -76,7 +77,9 @@ import kotlin.math.roundToInt
 @Composable
 fun GameScreen(
     windowSize: WindowWidthSizeClass,
-    viewModel: GameViewModel
+    viewModel: GameViewModel,
+    maxHeight: Dp = Dp.Unspecified,
+    maxWidth: Dp = Dp.Unspecified
 ) {
     val gameState by viewModel.gameState.collectAsState()
     val animState by viewModel.animState.collectAsState()
@@ -84,10 +87,19 @@ fun GameScreen(
     val stockfishEnabled by viewModel.stockfishEnabled.collectAsState()
     val scrollState = rememberScrollState()
 
+    // Leave a bit of buffer for the top/bottom UI elements
+    val boardSize = if (maxHeight != Dp.Unspecified && maxWidth != Dp.Unspecified) {
+        val calculatedMaxHeight = (maxHeight - 200.dp).coerceAtLeast(100.dp)
+        min(maxWidth, calculatedMaxHeight)
+    } else {
+        Dp.Unspecified
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
+            .fillMaxSize()
             .verticalScroll(scrollState)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
     ) {
@@ -140,6 +152,7 @@ fun GameScreen(
             gameState = gameState,
             animState = animState,
             windowSize = windowSize,
+            boardSize = boardSize, // new parameter
             updateSelected = viewModel::updateSelected,
             playerMove = viewModel::playerMove,
             animationEnd = viewModel::animationEnd
@@ -239,6 +252,7 @@ fun Board(
     gameState: GameUiState,
     animState: PieceAnimationState,
     windowSize: WindowWidthSizeClass,
+    boardSize: Dp = Dp.Unspecified,
     updateSelected: (Pair<Int, Int>) -> Unit,
     playerMove: (Int, Pair<Int, Int>) -> Unit,
     animationEnd: () -> Unit
@@ -264,14 +278,18 @@ fun Board(
         selectedPossibleMoves.value = emptyList()
     }
 
+    val boxModifier = Modifier.padding(
+        when (windowSize) {
+            WindowWidthSizeClass.Expanded -> 18.dp
+            WindowWidthSizeClass.Medium -> 12.dp
+            WindowWidthSizeClass.Compact -> 8.dp
+        }
+    ).let {
+        if (boardSize != Dp.Unspecified) it.size(boardSize) else it
+    }
+
     Box(
-        modifier = Modifier.padding(
-            when (windowSize) {
-                WindowWidthSizeClass.Expanded -> 18.dp
-                WindowWidthSizeClass.Medium -> 12.dp
-                WindowWidthSizeClass.Compact -> 8.dp
-            }
-        )
+        modifier = boxModifier
     ) {
         Column(modifier = Modifier.testTag("chess_board")) {
             repeat(8) { row ->

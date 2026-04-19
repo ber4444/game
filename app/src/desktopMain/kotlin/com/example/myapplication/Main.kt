@@ -4,17 +4,34 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.WindowState
+import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 fun main() = application {
     val viewModel = remember { GameViewModel() }
     DisposableEffect(Unit) {
-        onDispose { viewModel.close() }
+        val engine = DesktopStockfishEngine()
+        CoroutineScope(Dispatchers.IO).launch {
+            if (engine.start()) {
+                viewModel.attachEngine(engine)
+            } else {
+                println("Failed to start stockfish.")
+            }
+        }
+        onDispose {
+            engine.close()
+            viewModel.close()
+        }
     }
 
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Chess"
+        title = "Chess",
+        state = WindowState(width = 800.dp, height = 900.dp)
     ) {
         MyApplicationTheme {
             ChessApp(viewModel = viewModel)

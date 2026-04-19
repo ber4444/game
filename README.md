@@ -6,6 +6,16 @@ Compose Multiplatform chess app targeting:
 - Linux desktop (JVM)
 - Web (Wasm)
 
+## Setup
+
+For the desktop target, install stockfish first:
+
+```bash
+sudo apt install stockfish  # For Ubuntu/Debian
+sudo pacman -S stockfish    # For Arch
+sudo dnf install stockfish  # For Fedora
+```
+
 ## Project layout
 
 - `app/src/commonMain` shared chess UI, game rules, and compose resources
