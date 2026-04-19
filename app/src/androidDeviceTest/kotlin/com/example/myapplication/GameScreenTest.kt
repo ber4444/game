@@ -7,7 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -26,7 +26,7 @@ import kotlin.random.Random
 @RunWith(AndroidJUnit4::class)
 class GameScreenTest {
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule = createAndroidComposeRule<ScreenshotTestActivity>()
 
     @Test
     fun testButtonClickAndPieceDisplayed() {
@@ -157,6 +157,10 @@ class GameScreenTest {
             "Expected chessboard to be below status bar (≥ $statusBarHeightPx px), but was at $chessboardTop px",
             chessboardTop >= statusBarHeightPx
         )
+
+        composeTestRule
+            .onNodeWithTag(boardSquareTag(SquareType.Empty, row = 0, column = 0))
+            .assertIsDisplayed()
     }
 
     private fun performRandomPlayerMove(): String {

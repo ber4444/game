@@ -2,6 +2,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.api.file.DirectoryProperty
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -77,8 +78,7 @@ kotlin {
             dependencies {
                 implementation(libs.androidx.test.ext.junit)
                 implementation(libs.androidx.espresso.device)
-		@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-                implementation(compose.uiTest)
+                implementation(libs.androidx.compose.ui.test.junit4.android)
             }
         }
 
@@ -91,8 +91,22 @@ kotlin {
 }
 
 compose.resources {
+    packageOfResClass = "game.app.generated.resources"
     publicResClass = true
-    packageOfResClass = "com.example.myapplication.generated.resources"
+}
+
+tasks.configureEach {
+    if (name.endsWith("ComposeResourcesToAndroidAssets")) {
+        val outputDirectory = javaClass.methods
+            .firstOrNull { it.name == "getOutputDirectory" && it.parameterCount == 0 }
+            ?.invoke(this) as? DirectoryProperty
+
+        if (outputDirectory != null && !outputDirectory.isPresent) {
+            outputDirectory.set(
+                layout.buildDirectory.dir("generated/compose/resourceGenerator/androidAssets/$name")
+            )
+        }
+    }
 }
 
 compose.desktop {
