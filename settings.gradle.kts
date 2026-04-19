@@ -16,6 +16,15 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        ivy {
+            name = "Node.js Distributions"
+            setUrl("https://nodejs.org/dist")
+            patternLayout {
+                artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]")
+            }
+            metadataSources { artifact() }
+            content { includeModule("org.nodejs", "node") }
+        }
     }
 }
 
