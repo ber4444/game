@@ -224,4 +224,38 @@ class GameViewModelTest {
         )
         assertTrue("King should be not be in check, but no legal moves (stalemate)", !kingInCheck && !playerHasLegalMove)
     }
+
+    @Test
+    fun `test white pieces do not turn black after first move in autoplay`() {
+        val viewModel = GameViewModel()
+
+        // Execute the first automatic move for white
+        viewModel.moveCPU(Set.WHITE) { enemyPositions, enemyPieces, allyPositions, allyPieces ->
+            pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
+        }
+
+        // At this point, the turn should switch to BLACK
+        assertTrue(viewModel.gameState.value.turn == Set.BLACK, "Turn should be BLACK")
+
+        // Check that white pieces are still correctly stored in white arrays
+        val piecesWhite = viewModel.gameState.value.piecesWhite
+        for (piece in piecesWhite) {
+            assertTrue(piece.set == Set.WHITE, "A white piece turned to black: ${piece.name}")
+        }
+
+        // Execute the automatic move for black to ensure black pieces stay black
+        viewModel.moveCPU(Set.BLACK) { enemyPositions, enemyPieces, allyPositions, allyPieces ->
+            pickMoveRandom(enemyPositions, enemyPieces, allyPositions, allyPieces)
+        }
+
+        val piecesBlack = viewModel.gameState.value.piecesBlack
+        for (piece in piecesBlack) {
+            assertTrue(piece.set == Set.BLACK, "A black piece turned to white: ${piece.name}")
+        }
+
+        val piecesWhiteAfterBlackMove = viewModel.gameState.value.piecesWhite
+        for (piece in piecesWhiteAfterBlackMove) {
+            assertTrue(piece.set == Set.WHITE, "A white piece turned to black after black's move: ${piece.name}")
+        }
+    }
 }

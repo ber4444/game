@@ -228,7 +228,7 @@ class GameViewModel(
         _gameState.value = deriveNewGameState(
             newPosition = newPosition,
             pieceIndex = positionIndexPair.second,
-            turn = _gameState.value.turn,
+            turn = turn,
             enemyPieces = enemyPieces,
             enemyPositions = enemyPositions,
             allyPositions = allyPositions,

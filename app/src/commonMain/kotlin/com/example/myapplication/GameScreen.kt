@@ -179,7 +179,7 @@ fun GameScreen(
         }
     }
 
-    if (gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null) {
+    if (gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null && !viewState.moveButtonLock) {
         viewModel.startUserTurn()
     }
 }

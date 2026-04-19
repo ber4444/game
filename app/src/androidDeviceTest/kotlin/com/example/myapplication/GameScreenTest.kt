@@ -197,6 +197,31 @@ class GameScreenTest {
         throw AssertionError("Expected to find a white piece with at least one legal move")
     }
 
+    @Test
+    fun testWhitePiecesDoNotTurnBlackInAutoplay() {
+        val viewModel = GameViewModel()
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                GameScreen(WindowWidthSizeClass.Medium, viewModel)
+            }
+        }
+
+        // Enable autoplay
+        composeTestRule.onNodeWithText("Autoplay").performClick()
+
+        // Wait for white's auto move, and the animation to clear
+        composeTestRule.waitUntil(timeoutMillis = 10_000) {
+            viewModel.gameState.value.turn == Set.BLACK
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Verify that existing white pieces are still white
+        val whitePieceTags = existingSquareTags(SquareType.WhitePiece)
+        assertTrue("Expected to find white pieces on the board", whitePieceTags.isNotEmpty())
+    }
+
     private fun existingSquareTags(squareType: SquareType): List<String> {
         return allBoardSquareTags(squareType).filter { tag ->
             composeTestRule
