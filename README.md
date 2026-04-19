@@ -27,7 +27,7 @@ sudo dnf install stockfish  # For Fedora
 ## Useful Gradle tasks
 
 - `./gradlew test` runs shared unit tests
-- `./gradlew :androidApp:assembleDebug` builds the Android app
+- `./gradlew assembleDebug installDebug` builds and installs the Android app
 - `./gradlew :app:desktopRun` launches the desktop app
 - `./gradlew :app:wasmJsBrowserDevelopmentRun` starts the web target
 - `./gradlew :app:connectedAndroidDeviceTest` runs Android UI tests
