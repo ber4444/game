@@ -18,8 +18,8 @@ class GameViewModelTest {
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
-        assertTrue("White piece out of bounds", positionWhite.first in 0 until BOARD_SIZE && positionWhite.second in 0 until BOARD_SIZE)
-        assertTrue("Pieces overlap", positionWhite != positionBlack)
+        assertTrue(positionWhite.first in 0 until BOARD_SIZE && positionWhite.second in 0 until BOARD_SIZE, "White piece out of bounds")
+        assertTrue(positionWhite != positionBlack, "Pieces overlap")
     }
 
     @Test
@@ -34,8 +34,8 @@ class GameViewModelTest {
         val positionBlack = viewModel.gameState.value.positionsBlack.first()
         val positionWhite = viewModel.gameState.value.positionsWhite.first()
 
-        assertTrue("Black piece out of bounds", positionBlack.first in 0 until BOARD_SIZE && positionBlack.second in 0 until BOARD_SIZE)
-        assertTrue("Pieces overlap", positionBlack != positionWhite)
+        assertTrue(positionBlack.first in 0 until BOARD_SIZE && positionBlack.second in 0 until BOARD_SIZE, "Black piece out of bounds")
+        assertTrue(positionBlack != positionWhite, "Pieces overlap")
     }
 
     @Test
@@ -59,9 +59,9 @@ class GameViewModelTest {
             val positionWhite = viewModel.gameState.value.positionsWhite.first()
             val positionBlack = viewModel.gameState.value.positionsBlack.first()
 
-            assertTrue("White piece out of bounds", positionWhite.first in 0 until BOARD_SIZE && positionWhite.second in 0 until BOARD_SIZE)
-            assertTrue("Black piece out of bounds", positionBlack.first in 0 until BOARD_SIZE && positionBlack.second in 0 until BOARD_SIZE)
-            assertTrue("Pieces overlap", positionWhite != positionBlack)
+            assertTrue(positionWhite.first in 0 until BOARD_SIZE && positionWhite.second in 0 until BOARD_SIZE, "White piece out of bounds")
+            assertTrue(positionBlack.first in 0 until BOARD_SIZE && positionBlack.second in 0 until BOARD_SIZE, "Black piece out of bounds")
+            assertTrue(positionWhite != positionBlack, "Pieces overlap")
         }
     }
 
@@ -123,13 +123,13 @@ class GameViewModelTest {
         )
 
         assertTrue(
-            "Knights should be able to capture King even when allies are in between",
             checkCheck(
                 kingPosition = kingPosition,
                 enemyPositions = killingGameState.positionsBlack,
                 enemyPieces = killingGameState.piecesBlack,
                 allyPositions = killingGameState.positionsWhite
-            )
+            ),
+            "Knights should be able to capture King even when allies are in between"
         )
     }
 
@@ -164,8 +164,8 @@ class GameViewModelTest {
         )
 
         assertTrue(
-            "Queens should be blocked by King's allies",
-            !kingIsDead
+            !kingIsDead,
+            "Queens should be blocked by King's allies"
         )
     }
 
@@ -192,7 +192,7 @@ class GameViewModelTest {
             allyPositions = killingGameState.positionsWhite,
             allyPieces = killingGameState.piecesWhite,
         )
-        assertTrue("King should be in check and still have valid move", kingInCheck && playerHasLegalMove)
+        assertTrue(kingInCheck && playerHasLegalMove, "King should be in check and still have valid move")
     }
 
     @Test
@@ -222,7 +222,7 @@ class GameViewModelTest {
             allyPositions = killingGameState.positionsWhite,
             allyPieces = killingGameState.piecesWhite,
         )
-        assertTrue("King should be not be in check, but no legal moves (stalemate)", !kingInCheck && !playerHasLegalMove)
+        assertTrue(!kingInCheck && !playerHasLegalMove, "King should be not be in check, but no legal moves (stalemate)")
     }
 
     @Test

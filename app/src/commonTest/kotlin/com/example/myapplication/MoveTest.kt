@@ -38,9 +38,10 @@ class MoveTest {
         }
 
         assertTrue(
-            "Distance traveled was $x,$y which is a King's distance and the King should have no moves",
-            kingDidNotMove
+            kingDidNotMove,
+            "Distance traveled was $x,$y which is a King's distance and the King should have no moves"
         )
     }
+
 
 }

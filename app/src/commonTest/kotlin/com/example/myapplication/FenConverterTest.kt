@@ -13,9 +13,11 @@ class FenConverterTest {
 
         // Starting position: black on rows 0-1, white on rows 6-7
         // FEN piece placement should match standard starting position
-        assertTrue("FEN should start with piece placement",
-            fen.startsWith("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"))
-        assertTrue("FEN should indicate white to move", fen.contains(" w "))
+        assertTrue(
+            fen.startsWith("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"),
+            "FEN should start with piece placement"
+        )
+        assertTrue(fen.contains(" w "), "FEN should indicate white to move")
     }
 
     @Test
@@ -31,8 +33,10 @@ class FenConverterTest {
         // Row 0: "4k3" (king at column 4)
         // Rows 1-6: "8" (empty)
         // Row 7: "4K3" (king at column 4)
-        assertTrue("FEN should have black king on rank 8",
-            fen.startsWith("4k3/8/8/8/8/8/8/4K3"))
+        assertTrue(
+            fen.startsWith("4k3/8/8/8/8/8/8/4K3"),
+            "FEN should have black king on rank 8"
+        )
     }
 
     @Test
@@ -59,8 +63,8 @@ class FenConverterTest {
         val fenWhite = FenConverter.gameStateToFen(whiteToMove)
         val fenBlack = FenConverter.gameStateToFen(blackToMove)
 
-        assertTrue("White turn FEN should contain ' w '", fenWhite.contains(" w "))
-        assertTrue("Black turn FEN should contain ' b '", fenBlack.contains(" b "))
+        assertTrue(fenWhite.contains(" w "), "White turn FEN should contain ' w '")
+        assertTrue(fenBlack.contains(" b "), "Black turn FEN should contain ' b '")
     }
 
     @Test
@@ -76,7 +80,7 @@ class FenConverterTest {
 
         // Verify the FEN has the right structure (8 ranks separated by /)
         val ranks = fen.split(" ")[0].split("/")
-        assertEquals("FEN should have 8 ranks", 8, ranks.size)
+        assertEquals(8, ranks.size, "FEN should have 8 ranks")
 
         // Row 0 (rank 8): "4k3"
         assertEquals("4k3", ranks[0])
