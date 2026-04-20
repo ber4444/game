@@ -1,4 +1,7 @@
 build/*
+app/build/*
+androidApp/build/*
+.kotlin/*
 .gradle/*
 .idea/*
 local.properties

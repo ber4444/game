@@ -1,83 +1,145 @@
-@file:Suppress("DEPRECATION")
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+@file:Suppress("UnstableApiUsage")
 
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.api.file.DirectoryProperty
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 }
 
-android {
-    namespace = "com.example.myapplication"
-    compileSdk = 36
+kotlin {
 
-    defaultConfig {
-        applicationId = "com.example.myapplication"
+    android {
+        namespace = "com.example.myapplication"
+        compileSdk = 36
         minSdk = 24
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
         }
-    }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-    }
-    testOptions {
-        emulatorControl {
-            enable = true
-        }
-        unitTests {
+        withHostTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
             isIncludeAndroidResources = true
         }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    buildFeatures {
-        compose = true
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+
+        withDeviceTestBuilder {}.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+            emulatorControl {
+                enable = true
+            }
         }
-        jniLibs {
-            useLegacyPackaging = true
+
+
+
+        packaging {
+            resources {
+                excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            }
+        }
+    }
+
+    jvm("desktop") {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+        }
+    }
+
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
+    sourceSets {
+        val jvmCommonMain by creating {
+            dependsOn(commonMain.get())
+        }
+        androidMain { dependsOn(jvmCommonMain) }
+
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.kermit)
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+        }
+
+        val androidDeviceTest by getting {
+            dependencies {
+                implementation(libs.androidx.test.ext.junit)
+                implementation(libs.androidx.espresso.device)
+                implementation(libs.androidx.compose.ui.test.junit4.android)
+                implementation(libs.androidx.compose.ui.test.manifest)
+                implementation(libs.androidx.activity.compose)
+            }
+        }
+
+        val desktopMain by getting {
+            dependsOn(jvmCommonMain)
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
         }
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_1_8)
+compose.resources {
+    packageOfResClass = "game.app.generated.resources"
+    publicResClass = true
+}
+
+tasks.configureEach {
+    if (name.endsWith("ComposeResourcesToAndroidAssets")) {
+        val outputDirectory = javaClass.methods
+            .firstOrNull { it.name == "getOutputDirectory" && it.parameterCount == 0 }
+            ?.invoke(this) as? DirectoryProperty
+
+        if (outputDirectory != null && !outputDirectory.isPresent) {
+            outputDirectory.set(
+                layout.buildDirectory.dir("generated/compose/resourceGenerator/androidAssets/$name")
+            )
+        }
     }
 }
 
-dependencies {
+compose.desktop {
+    application {
+        mainClass = "com.example.myapplication.MainKt"
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.windowsize)
-    implementation(libs.androidx.compose.ui.test.junit4)
-    testImplementation(libs.junit)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.device)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+        nativeDistributions {
+            packageName = "game"
+            packageVersion = "1.0.0"
+            targetFormats(TargetFormat.Deb)
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == "mergeAndroidDeviceTestAssets") {
+        dependsOn("copyAndroidMainComposeResourcesToAndroidAssets")
+        doLast {
+            val srcDir = project.layout.buildDirectory.dir("generated/compose/resourceGenerator/androidAssets/copyAndroidMainComposeResourcesToAndroidAssets").get().asFile
+            val destDir = project.layout.buildDirectory.dir("intermediates/assets/androidDeviceTest/mergeAndroidDeviceTestAssets").get().asFile
+            srcDir.copyRecursively(destDir, overwrite = true)
+        }
+    }
 }
