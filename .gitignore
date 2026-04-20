@@ -1,4 +1,5 @@
 build/*
+app/build/*
 androidApp/build/*
 .kotlin/*
 .gradle/*
