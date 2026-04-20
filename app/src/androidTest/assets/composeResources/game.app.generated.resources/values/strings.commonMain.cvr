@@ -1,0 +1,10 @@
+version:0
+string|app_name|Q2hlc3M=
+string|autoplay_label|QXV0b3BsYXk=
+string|cancel_button|Q2FuY2Vs
+string|game_end_message_no_winner|R2FtZSBlbmRlZCBpbiBhICUxJHMh
+string|game_end_message_winner|R2FtZSBlbmRlZCEgJTEkcyB3aW5zIQ==
+string|play_again_button|UGxheSBBZ2FpbiE=
+string|reset_button|UmVzZXQ=
+string|stockfish_disabled|U3RvY2tmaXNoOiBvZmY=
+string|stockfish_enabled|U3RvY2tmaXNoOiBvbg==

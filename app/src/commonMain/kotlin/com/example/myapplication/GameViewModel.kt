@@ -101,6 +101,10 @@ class GameViewModel(
     }
 
     fun startUserTurn() {
+        println("START USER TURN")
+        if (_viewState.value.moveButtonLock) return
+        println("MOVEBUTTONLOCK=TRUE"); _viewState.value = _viewState.value.copy(moveButtonLock = true)
+
         gameMoves?.cancel()
         gameMoves = scope.launch {
             delay(500)
@@ -154,6 +158,7 @@ class GameViewModel(
     }
 
     fun moveCPU(
+
         turn: Set = _gameState.value.turn,
         pickMove: (
             enemyPositions: List<Pair<Int, Int>>,
@@ -163,7 +168,7 @@ class GameViewModel(
         ) -> Pair<Pair<Int, Int>, Int>
     ) {
         _gameState.value = _gameState.value.copy(turn = turn, selectedSquare = INVALID_POSITION)
-        _viewState.value = _viewState.value.copy(moveButtonLock = true)
+        println("MOVEBUTTONLOCK=TRUE"); _viewState.value = _viewState.value.copy(moveButtonLock = true)
 
         val allyPositions: List<Pair<Int, Int>>
         val allyPieces: List<Piece>

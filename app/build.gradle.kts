@@ -35,6 +35,8 @@ kotlin {
             }
         }
 
+
+
         packaging {
             resources {
                 excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -79,6 +81,8 @@ kotlin {
                 implementation(libs.androidx.test.ext.junit)
                 implementation(libs.androidx.espresso.device)
                 implementation(libs.androidx.compose.ui.test.junit4.android)
+                implementation(libs.androidx.compose.ui.test.manifest)
+                implementation(libs.androidx.activity.compose)
             }
         }
 
@@ -117,6 +121,17 @@ compose.desktop {
             packageName = "game"
             packageVersion = "1.0.0"
             targetFormats(TargetFormat.Deb)
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == "mergeAndroidDeviceTestAssets") {
+        dependsOn("copyAndroidMainComposeResourcesToAndroidAssets")
+        doLast {
+            val srcDir = project.layout.buildDirectory.dir("generated/compose/resourceGenerator/androidAssets/copyAndroidMainComposeResourcesToAndroidAssets").get().asFile
+            val destDir = project.layout.buildDirectory.dir("intermediates/assets/androidDeviceTest/mergeAndroidDeviceTestAssets").get().asFile
+            srcDir.copyRecursively(destDir, overwrite = true)
         }
     }
 }

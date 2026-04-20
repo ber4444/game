@@ -192,8 +192,10 @@ fun GameScreen(
         }
     }
 
-    if (gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null && !viewState.moveButtonLock) {
-        viewModel.startUserTurn()
+    LaunchedEffect(gameState.autoPlay, gameState.winState, animState.pieceToAnimate, viewState.moveButtonLock) {
+        if (gameState.autoPlay && gameState.winState == WinState.NONE && animState.pieceToAnimate == null && !viewState.moveButtonLock) {
+            viewModel.startUserTurn()
+        }
     }
 }
 
