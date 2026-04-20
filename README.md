@@ -32,4 +32,8 @@ sudo dnf install stockfish  # For Fedora
 - `./gradlew :app:wasmJsBrowserDevelopmentRun` starts the web target
 - `./gradlew :app:connectedAndroidDeviceTest` runs Android UI tests
 
+Mobile and desktop screenshots:
+
 <img width="1768" height="2208" alt="Screenshot_20260416_142830" src="https://github.com/user-attachments/assets/3dc55dee-90e0-4aad-85ea-fab60a22a132" />
+
+<img width="1602" height="1874" alt="Screenshot From 2026-04-19 14-43-11" src="https://github.com/user-attachments/assets/899e1085-6810-41df-83e4-6940d4e9c505" />
