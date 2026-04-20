@@ -1,5 +1,9 @@
 package com.example.myapplication
 
+import co.touchlab.kermit.Logger
+
+private val logger = Logger.withTag("Move")
+
 // Used to represent an invalid position on the board
 //  y and x values must always be between 0 and 8
 val INVALID_POSITION = Pair(-1, -1)
@@ -65,7 +69,7 @@ fun pickMoveStockfish(
 
     // Convert board state to FEN
     val fen = FenConverter.gameStateToFen(gameState)
-    println("Stockfish FEN: $fen")
+    logger.d { "Stockfish FEN: $fen" }
 
     // Query Stockfish for the best move
     val bestMoveUci = engine.getBestMove(fen)
@@ -77,16 +81,16 @@ fun pickMoveStockfish(
             // Validate that this is actually a legal move
             val allLegal = getAllLegalMoves(enemyPositions, enemyPieces, allyPositions, allyPieces)
             if (allLegal.any { it.first == appMove.first && it.second == appMove.second }) {
-                println("Stockfish move accepted: $bestMoveUci -> ${appMove.first}")
+                logger.d { "Stockfish move accepted: $bestMoveUci -> ${appMove.first}" }
                 return appMove
             } else {
-                println("Stockfish move $bestMoveUci is not legal in app, falling back")
+                logger.w { "Stockfish move $bestMoveUci is not legal in app, falling back" }
             }
         } else {
-            println("Could not convert Stockfish move $bestMoveUci, falling back")
+            logger.w { "Could not convert Stockfish move $bestMoveUci, falling back" }
         }
     } else {
-        println("Stockfish returned no move, falling back to CPU")
+        logger.w { "Stockfish returned no move, falling back to CPU" }
     }
 
     // Fall back to the simple CPU algorithm
@@ -167,7 +171,7 @@ fun checkCheck(
     // DEBUG: Show which Piece poses a threat]
     if(checkMoveIndex != -1) {
         val attackerIndex = enemyMoves[checkMoveIndex].second
-        println("King at ${kingPosition} is at risk of attack from ${enemyPieces[attackerIndex].name} at ${enemyPositions[attackerIndex]}!")
+        logger.d { "King at ${kingPosition} is at risk of attack from ${enemyPieces[attackerIndex].name} at ${enemyPositions[attackerIndex]}!" }
     }
 
     // If an enemy can reach the King, they are in Check

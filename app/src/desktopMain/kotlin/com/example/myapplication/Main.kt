@@ -7,6 +7,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,7 +20,7 @@ fun main() = application {
             if (engine.start()) {
                 viewModel.attachEngine(engine)
             } else {
-                println("Failed to start stockfish.")
+                Logger.w("Main") { "Failed to start stockfish." }
             }
         }
         onDispose {

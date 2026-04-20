@@ -8,12 +8,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.ViewModel
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import android.content.pm.ApplicationInfo
+import co.touchlab.kermit.Logger
+import co.touchlab.kermit.Severity
 
 class MainActivity : ComponentActivity() {
     private val holder: AndroidGameViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!isDebug) {
+            Logger.setMinSeverity(Severity.Assert)
+        }
+
         enableEdgeToEdge()
 
         holder.gameViewModel.attachEngine(createStockfishEngine())
@@ -33,10 +42,10 @@ class MainActivity : ComponentActivity() {
             supportedAbis = Build.SUPPORTED_ABIS
         )
         return if (engine.isAvailable() && engine.start()) {
-            println("Stockfish engine initialized successfully")
+            Logger.i("MainActivity") { "Stockfish engine initialized successfully" }
             engine
         } else {
-            println("Stockfish engine is unavailable")
+            Logger.w("MainActivity") { "Stockfish engine is unavailable" }
             null
         }
     }

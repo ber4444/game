@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,6 +30,10 @@ class GameViewModel(
 
     private var gameMoves: Job? = null
     private var chessEngine: ChessEngine? = null
+
+    companion object {
+        private val logger = Logger.withTag("GameViewModel")
+    }
 
     fun attachEngine(engine: ChessEngine?) {
         chessEngine?.close()
@@ -78,7 +83,7 @@ class GameViewModel(
             )
 
             if (legalMoves.none { move -> move.first == newPosition && move.second == selectedPieceIndex }) {
-                println("Cannot move into Check!")
+                logger.w { "Cannot move into Check!" }
                 return
             }
 
@@ -101,9 +106,9 @@ class GameViewModel(
     }
 
     fun startUserTurn() {
-        println("START USER TURN")
+        logger.d { "START USER TURN" }
         if (_viewState.value.moveButtonLock) return
-        println("MOVEBUTTONLOCK=TRUE"); _viewState.value = _viewState.value.copy(moveButtonLock = true)
+        logger.d { "MOVEBUTTONLOCK=TRUE" }; _viewState.value = _viewState.value.copy(moveButtonLock = true)
 
         gameMoves?.cancel()
         gameMoves = scope.launch {
@@ -151,14 +156,13 @@ class GameViewModel(
     }
 
     fun resetGame() {
-        println("Game reset")
+        logger.i { "Game reset" }
         _gameState.value = GameUiState()
         _viewState.value = ViewState()
         _animState.value = PieceAnimationState()
     }
 
     fun moveCPU(
-
         turn: Set = _gameState.value.turn,
         pickMove: (
             enemyPositions: List<Pair<Int, Int>>,
@@ -168,7 +172,7 @@ class GameViewModel(
         ) -> Pair<Pair<Int, Int>, Int>
     ) {
         _gameState.value = _gameState.value.copy(turn = turn, selectedSquare = INVALID_POSITION)
-        println("MOVEBUTTONLOCK=TRUE"); _viewState.value = _viewState.value.copy(moveButtonLock = true)
+        logger.d { "MOVEBUTTONLOCK=TRUE" }; _viewState.value = _viewState.value.copy(moveButtonLock = true)
 
         val allyPositions: List<Pair<Int, Int>>
         val allyPieces: List<Piece>
@@ -207,9 +211,9 @@ class GameViewModel(
             (_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)
         ) {
             if (hasLegalMoves(enemyPositions, enemyPieces, allyPositions, allyPieces)) {
-                println("Must escape check!")
+                logger.i { "Must escape check!" }
             } else {
-                println("No legal moves to escape check! You lose!")
+                logger.i { "No legal moves to escape check! You lose!" }
                 _gameState.value = _gameState.value.copy(
                     winState = if (_gameState.value.turn == Set.BLACK) WinState.WHITE else WinState.BLACK
                 )
@@ -219,9 +223,9 @@ class GameViewModel(
             (!_gameState.value.inCheckBlack && _gameState.value.turn == Set.BLACK)
         ) {
             if (hasLegalMoves(enemyPositions, enemyPieces, allyPositions, allyPieces)) {
-                println("Continue playing, legal moves available.")
+                logger.d { "Continue playing, legal moves available." }
             } else {
-                println("No legal moves available, Stalemate!")
+                logger.i { "No legal moves available, Stalemate!" }
                 _gameState.value = _gameState.value.copy(winState = WinState.STALEMATE)
                 return
             }
@@ -260,11 +264,11 @@ class GameViewModel(
         val mutableEnemyPositions = enemyPositions.toMutableList()
         val mutableAllyPositions = allyPositions.toMutableList()
 
-        println("Moving $turn ${allyPieces[pieceIndex].name} from ${allyPositions[pieceIndex]} to $newPosition")
+        logger.d { "Moving $turn ${allyPieces[pieceIndex].name} from ${allyPositions[pieceIndex]} to $newPosition" }
 
         if (newPosition in enemyPositions) {
             val index = enemyPositions.indexOf(newPosition)
-            println("${when (turn) { Set.WHITE -> Set.BLACK.name; Set.BLACK -> Set.WHITE.name }} ${enemyPieces[index].name} was captured!")
+            logger.i { "${when (turn) { Set.WHITE -> Set.BLACK.name; Set.BLACK -> Set.WHITE.name }} ${enemyPieces[index].name} was captured!" }
             mutableEnemyPositions.removeAt(index)
             mutableEnemyPieces.removeAt(index)
         }
@@ -293,9 +297,9 @@ class GameViewModel(
         }
 
         if (allyInCheck) {
-            println("Ally $turn in Check!")
+            logger.i { "Ally $turn in Check!" }
         } else if (enemyInCheck) {
-            println("Enemy $nextTurn in Check!")
+            logger.i { "Enemy $nextTurn in Check!" }
         }
 
         return when (turn) {

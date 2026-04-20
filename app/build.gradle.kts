@@ -13,6 +13,7 @@ plugins {
 }
 
 kotlin {
+
     android {
         namespace = "com.example.myapplication"
         compileSdk = 36
@@ -56,6 +57,11 @@ kotlin {
     }
 
     sourceSets {
+        val jvmCommonMain by creating {
+            dependsOn(commonMain.get())
+        }
+        androidMain { dependsOn(jvmCommonMain) }
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -63,6 +69,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(libs.kermit)
         }
 
         commonTest.dependencies {
@@ -87,6 +94,7 @@ kotlin {
         }
 
         val desktopMain by getting {
+            dependsOn(jvmCommonMain)
             dependencies {
                 implementation(compose.desktop.currentOs)
             }

@@ -1,5 +1,6 @@
 [versions]
 agp = "9.1.1"
+kermit = "2.0.5"
 kotlin = "2.3.20"
 composeMultiplatform = "1.10.3"
 androidx-composeUi = "1.10.5"
@@ -11,6 +12,7 @@ espressoDevice = "1.1.0"
 junit = "4.13.2"
 
 [libraries]
+kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 androidx-compose-ui-test-junit4-android = { group = "androidx.compose.ui", name = "ui-test-junit4-android", version.ref = "androidx-composeUi" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "androidx-composeUi" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidx-activityCompose" }
